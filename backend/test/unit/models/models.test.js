@@ -121,14 +121,13 @@ describe("Task Model", () => {
   });
 
   it("should find tasks by user ID", async () => {
-    const tasks = await Task.create([
-      { title: "Task 1", userId },
-      { title: "Task 2", userId },
-      { title: "Task 3", userId }
-    ]);
+    // Create tasks one by one to ensure they are saved
+    await Task.create({ title: "Task 1", userId });
+    await Task.create({ title: "Task 2", userId });
+    await Task.create({ title: "Task 3", userId });
 
     // Wait a bit for the tasks to be saved
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise(resolve => setTimeout(resolve, 100));
 
     const foundTasks = await Task.find({ userId }).sort({ _id: 1 });
 
@@ -146,7 +145,7 @@ describe("Task Model", () => {
     });
 
     // Wait a bit for the task to be saved
-    await new Promise(resolve => setTimeout(resolve, 200));
+    await new Promise(resolve => setTimeout(resolve, 100));
 
     const updatedTask = await Task.findByIdAndUpdate(
       task._id,

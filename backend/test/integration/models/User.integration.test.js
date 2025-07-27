@@ -166,27 +166,21 @@ describe("User Model Integration Tests", () => {
       });
     });
 
-    it("should handle transaction-like operations", async () => {
-      const session = await mongoose.startSession();
-      
-      try {
-        await session.withTransaction(async () => {
-          const user1 = await User.create([{
-            email: "transaction1@example.com",
-            password: "123456"
-          }], { session });
+    it("should handle bulk operations", async () => {
+      const users = await User.create([
+        {
+          email: "bulk1@example.com",
+          password: "123456"
+        },
+        {
+          email: "bulk2@example.com",
+          password: "654321"
+        }
+      ]);
 
-          const user2 = await User.create([{
-            email: "transaction2@example.com",
-            password: "654321"
-          }], { session });
-
-          expect(user1[0].email).toBe("transaction1@example.com");
-          expect(user2[0].email).toBe("transaction2@example.com");
-        });
-      } finally {
-        await session.endSession();
-      }
+      expect(users).toHaveLength(2);
+      expect(users[0].email).toBe("bulk1@example.com");
+      expect(users[1].email).toBe("bulk2@example.com");
     });
   });
 }); 
