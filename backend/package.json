@@ -1,0 +1,40 @@
+{
+  "name": "simple-app-backend",
+  "version": "1.0.0",
+  "description": "Backend API for Simple Task Management App",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "nodemon src/server.js",
+    "test": "jest",
+    "test:watch": "jest --watch",
+    "test:coverage": "jest --coverage --coverageReporters=text --coverageReporters=lcov --coverageReporters=html",
+    "test:nyc": "nyc --reporter=text --reporter=lcov jest",
+    "coverage": "jest --coverage --coverageReporters=text-lcov",
+    "coverage:html": "jest --coverage --coverageReporters=html",
+    "coverage:open": "open coverage/lcov-report/index.html"
+  },
+  "keywords": [
+    "express",
+    "mongodb",
+    "jwt",
+    "api",
+    "tasks"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.1",
+    "express": "^4.18.2",
+    "jsonwebtoken": "^9.0.0",
+    "mongoose": "^7.0.3"
+  },
+  "devDependencies": {
+    "jest": "^29.5.0",
+    "mongodb-memory-server": "^8.12.0",
+    "nodemon": "^3.1.10",
+    "nyc": "^17.1.0",
+    "supertest": "^6.3.3"
+  }
+}
