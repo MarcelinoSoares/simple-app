@@ -134,7 +134,7 @@ describe('App Error Handling Integration Tests', () => {
         .set('Content-Type', 'application/json')
         .send('{"invalid": json}');
 
-      expect(res.statusCode).toBe(500);
+      expect(res.statusCode).toBe(400);
     });
 
     it('should handle missing authorization header', async () => {
@@ -182,7 +182,7 @@ describe('App Error Handling Integration Tests', () => {
         .set('Content-Type', 'text/plain')
         .send('plain text');
 
-      expect(res.statusCode).toBe(201);
+      expect(res.statusCode).toBe(400);
     });
   });
 

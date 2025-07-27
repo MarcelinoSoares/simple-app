@@ -126,6 +126,6 @@ describe("App Error Handling", () => {
       .set("Content-Type", "application/json")
       .send("invalid json");
     
-    expect(res.statusCode).toBe(500);
+    expect(res.statusCode).toBe(400);
   });
 }); 

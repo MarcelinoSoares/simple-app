@@ -16,8 +16,18 @@ beforeEach(async () => {
   
   for (const key in collections) {
     const collection = collections[key];
-    await collection.deleteMany();
+    await collection.deleteMany({});
   }
+  
+  // Drop all indexes and recreate them to avoid unique constraint issues
+  try {
+    await mongoose.connection.db.dropDatabase();
+  } catch (error) {
+    // Ignore errors if database doesn't exist
+  }
+  
+  // Wait a bit to ensure cleanup is complete
+  await new Promise(resolve => setTimeout(resolve, 200));
 });
 
 // Close database connection after all tests

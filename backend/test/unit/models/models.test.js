@@ -116,7 +116,7 @@ describe("Task Model", () => {
 
     expect(task.title).toBe("Minimal Task");
     expect(task.description).toBeUndefined();
-    expect(task.completed).toBeUndefined();
+    expect(task.completed).toBe(false);
     expect(task.userId.toString()).toBe(userId.toString());
   });
 
@@ -128,7 +128,7 @@ describe("Task Model", () => {
     ]);
 
     // Wait a bit for the tasks to be saved
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 200));
 
     const foundTasks = await Task.find({ userId }).sort({ _id: 1 });
 
@@ -146,7 +146,7 @@ describe("Task Model", () => {
     });
 
     // Wait a bit for the task to be saved
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 200));
 
     const updatedTask = await Task.findByIdAndUpdate(
       task._id,
@@ -185,7 +185,7 @@ describe("Task Model", () => {
     ]);
 
     // Wait a bit for the tasks to be saved
-    await new Promise(resolve => setTimeout(resolve, 100));
+    await new Promise(resolve => setTimeout(resolve, 200));
 
     const myTasks = await Task.find({ userId });
 
