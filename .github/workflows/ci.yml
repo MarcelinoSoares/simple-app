@@ -33,21 +33,28 @@ jobs:
       with:
         node-version: ${{ env.NODE_VERSION }}
         cache: 'npm'
+        cache-dependency-path: |
+          backend/package-lock.json
+          frontend/package-lock.json
 
     - name: Install Backend Dependencies
       run: |
         cd backend
-        npm ci
+        npm ci --prefer-offline --no-audit
 
     - name: Run Backend Tests (Jest)
       run: |
         cd backend
         npm run test
+      env:
+        NODE_ENV: test
+        MONGODB_URI: mongodb://localhost:27017/todo-app
+        JWT_SECRET: test-secret-key
 
     - name: Install Frontend Dependencies
       run: |
         cd frontend
-        npm ci
+        npm ci --prefer-offline --no-audit
 
     - name: Build Frontend
       run: |
@@ -59,6 +66,10 @@ jobs:
         cd backend
         npm run dev &
         sleep 5
+      env:
+        NODE_ENV: test
+        MONGODB_URI: mongodb://localhost:27017/todo-app
+        JWT_SECRET: test-secret-key
 
     - name: Start Frontend
       run: |

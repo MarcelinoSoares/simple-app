@@ -29,11 +29,14 @@ jobs:
       with:
         node-version: '18'
         cache: 'npm'
+        cache-dependency-path: |
+          backend/package-lock.json
+          frontend/package-lock.json
 
     - name: Install Backend Dependencies
       run: |
         cd backend
-        npm ci
+        npm ci --prefer-offline --no-audit
 
     - name: Run Backend Tests
       run: |
@@ -56,7 +59,7 @@ jobs:
     - name: Install Frontend Dependencies
       run: |
         cd frontend
-        npm ci
+        npm ci --prefer-offline --no-audit
 
     - name: Build Frontend
       run: |
