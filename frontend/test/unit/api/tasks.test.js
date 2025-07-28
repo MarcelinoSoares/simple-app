@@ -13,20 +13,18 @@ Object.defineProperty(window, 'localStorage', {
 })
 
 // Mock the auth module (which exports the api instance)
-const mockApi = {
-  get: vi.fn(),
-  post: vi.fn(),
-  put: vi.fn(),
-  delete: vi.fn(),
-  defaults: {
-    headers: {
-      common: {}
-    }
-  }
-}
-
 vi.mock('../../../src/api/auth', () => ({
-  default: mockApi,
+  default: {
+    get: vi.fn(),
+    post: vi.fn(),
+    put: vi.fn(),
+    delete: vi.fn(),
+    defaults: {
+      headers: {
+        common: {}
+      }
+    }
+  },
   getToken: vi.fn(() => localStorageMock.getItem('token')),
   setToken: vi.fn(),
   removeToken: vi.fn(),
@@ -36,9 +34,15 @@ vi.mock('../../../src/api/auth', () => ({
 import { getTasks, createTask, updateTask, deleteTask } from '../../../src/api/tasks'
 
 describe('Tasks API', () => {
-  beforeEach(() => {
+  let mockApi
+
+  beforeEach(async () => {
     vi.clearAllMocks()
     localStorageMock.getItem.mockReturnValue('fake-token')
+    
+    // Get the mocked api instance
+    const authModule = await import('../../../src/api/auth')
+    mockApi = authModule.default
   })
 
   describe('getTasks', () => {

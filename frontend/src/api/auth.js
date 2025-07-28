@@ -141,9 +141,13 @@ export const removeToken = () => {
 export const setupAuthHeader = () => {
   const token = getToken()
   if (token) {
-    api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+    if (api.defaults && api.defaults.headers) {
+      api.defaults.headers.common['Authorization'] = `Bearer ${token}`
+    }
   } else {
-    delete api.defaults.headers.common['Authorization']
+    if (api.defaults && api.defaults.headers && api.defaults.headers.common) {
+      delete api.defaults.headers.common['Authorization']
+    }
   }
 }
 

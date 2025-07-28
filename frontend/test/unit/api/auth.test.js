@@ -1,5 +1,22 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
+// Mock axios
+vi.mock('axios', () => ({
+  default: {
+    create: vi.fn(() => ({
+      post: vi.fn(),
+      get: vi.fn(),
+      put: vi.fn(),
+      delete: vi.fn(),
+      defaults: {
+        headers: {
+          common: {}
+        }
+      }
+    }))
+  }
+}))
+
 // Mock localStorage
 const localStorageMock = {
   getItem: vi.fn(),
@@ -10,25 +27,6 @@ const localStorageMock = {
 Object.defineProperty(window, 'localStorage', {
   value: localStorageMock
 })
-
-// Mock axios
-const mockAxios = {
-  create: vi.fn(() => ({
-    post: vi.fn(),
-    get: vi.fn(),
-    put: vi.fn(),
-    delete: vi.fn(),
-    defaults: {
-      headers: {
-        common: {}
-      }
-    }
-  }))
-}
-
-vi.mock('axios', () => ({
-  default: mockAxios
-}))
 
 import { getToken, setToken, removeToken } from '../../../src/api/auth'
 
