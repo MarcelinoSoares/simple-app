@@ -25,10 +25,7 @@ COPY --from=builder /app/dist /usr/share/nginx/html
 # Copy nginx configuration
 COPY nginx.conf /etc/nginx/nginx.conf
 
-# Create non-root user (nginx group already exists)
-RUN adduser -S nginx -u 1001 -G nginx
-
-# Change ownership
+# Change ownership (nginx user already exists)
 RUN chown -R nginx:nginx /usr/share/nginx/html
 RUN chown -R nginx:nginx /var/cache/nginx
 RUN chown -R nginx:nginx /var/log/nginx
