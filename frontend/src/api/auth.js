@@ -151,8 +151,8 @@ export const setupAuthHeader = () => {
   }
 }
 
-// Only setup auth header if we're in a browser environment
-if (typeof window !== 'undefined') {
+// Only setup auth header if we're in a browser environment and api is properly initialized
+if (typeof window !== 'undefined' && api && api.defaults) {
   setupAuthHeader()
 }
 

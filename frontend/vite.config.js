@@ -24,6 +24,14 @@ export default defineConfig({
         '**/*.spec.{js,jsx}',
         'dist/',
       ],
+      thresholds: {
+        global: {
+          branches: 100,
+          functions: 100,
+          lines: 100,
+          statements: 100
+        }
+      }
     },
   },
   server: {

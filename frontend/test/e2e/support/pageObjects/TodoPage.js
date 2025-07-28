@@ -1,26 +1,50 @@
 class TodoPage {
   createTodo(title, description) {
-    cy.get("input[name='title']").type(title);
-    cy.get("textarea[name='description']").type(description);
-    cy.contains("Add").click();
+    cy.get("#task-title").type(title);
+    if (description) {
+      cy.get("#task-description").type(description);
+    }
+    cy.get("[data-testid='create-task-btn']").click();
   }
+  
   editTodo(oldTitle, newTitle) {
-    cy.contains(oldTitle).parent().within(() => {
-      cy.get("button.edit").click();
+    // Find the task by title and click the edit button (pencil icon)
+    cy.contains(oldTitle).closest('div').within(() => {
+      cy.get('svg').first().click(); // First SVG is the edit button
     });
-    cy.get("input[name='title']").clear().type(newTitle);
+    
+    // Clear and type new title in the edit input
+    cy.get('input[type="text"]').first().clear().type(newTitle);
+    
+    // Click save button
     cy.contains("Save").click();
   }
+  
   deleteTodo(title) {
-    cy.contains(title).parent().within(() => {
-      cy.get("button.delete").click();
+    // Find the task by title and click the delete button (trash icon)
+    cy.contains(title).closest('div').within(() => {
+      cy.get('svg').last().click(); // Last SVG is the delete button
     });
+    
+    // Confirm deletion in the confirmation dialog
+    cy.on('window:confirm', () => true);
   }
+  
   assertTodoVisible(title) {
     cy.contains(title).should("be.visible");
   }
+  
   assertTodoNotVisible(title) {
     cy.contains(title).should("not.exist");
+  }
+  
+  // Additional helper methods
+  waitForTasksToLoad() {
+    cy.contains("Loading tasks...").should("not.exist");
+  }
+  
+  assertTaskCompleted(title) {
+    cy.contains(title).should("have.class", "line-through");
   }
 }
 export default new TodoPage(); 

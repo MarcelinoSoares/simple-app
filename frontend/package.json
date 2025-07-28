@@ -10,6 +10,7 @@
     "cypress:run": "cypress run",
     "test:e2e": "cypress run",
     "test:e2e:open": "cypress open",
+    "test:e2e:full": "node start-server-and-test.js",
     "test": "vitest",
     "test:ui": "vitest --ui",
     "test:coverage": "vitest --coverage",

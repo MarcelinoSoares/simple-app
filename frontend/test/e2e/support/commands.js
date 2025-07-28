@@ -8,8 +8,8 @@
 // https://on.cypress.io/custom-commands
 // ***********************************************
 
-// Custom command to clear localStorage
-Cypress.Commands.add('clearLocalStorage', () => {
+// Override clearLocalStorage command
+Cypress.Commands.overwrite('clearLocalStorage', () => {
   cy.window().then((win) => {
     win.localStorage.clear()
   })
@@ -48,47 +48,76 @@ Cypress.Commands.add('waitForPageLoad', () => {
   cy.get('body').should('not.have.class', 'loading')
 })
 
-// Override visit command to handle authentication
-Cypress.Commands.overwrite('visit', (originalFn, url, options) => {
-  // Clear localStorage before each visit to ensure clean state
+// Custom command to visit with clean state
+Cypress.Commands.add('visitWithCleanState', (url, options) => {
   cy.clearLocalStorage()
-  return originalFn(url, options)
+  return cy.visit(url, options)
 })
 
 // Custom command to login
 Cypress.Commands.add('login', (email = 'test@example.com', password = '123456') => {
   cy.clearLocalStorage()
   cy.visit('/login')
-  cy.get('input[type="email"]').type(email)
-  cy.get('input[type="password"]').type(password)
+  cy.get('#email').type(email)
+  cy.get('#password').type(password)
   cy.get('button[type="submit"]').click()
-  cy.url().should('eq', Cypress.config().baseUrl + '/')
+  cy.contains('Task Manager').should('be.visible')
 })
 
 // Custom command to create a task
-Cypress.Commands.add('createTask', (title) => {
-  cy.get('input[placeholder="Nova tarefa"]').type(title)
-  cy.get('button').contains('Criar').click()
-  cy.get('ul li').should('contain', title)
+Cypress.Commands.add('createTask', (title, description = '') => {
+  cy.get('#task-title').type(title)
+  if (description) {
+    cy.get('#task-description').type(description)
+  }
+  cy.get('[data-testid="create-task-btn"]').click()
+  cy.contains(title).should('be.visible')
 })
 
 // Custom command to delete a task
 Cypress.Commands.add('deleteTask', (title) => {
-  cy.get('ul li').contains(title).parent().find('button').contains('Excluir').click()
-  cy.get('ul li').should('not.contain', title)
+  cy.contains(title).closest('div').within(() => {
+    cy.get('svg').last().click() // Last SVG is the delete button
+  })
+  cy.on('window:confirm', () => true)
+  cy.contains(title).should('not.exist')
 })
 
 // Custom command to toggle task completion
 Cypress.Commands.add('toggleTask', (title) => {
-  cy.get('ul li').contains(title).click()
+  cy.contains(title).closest('div').within(() => {
+    cy.get('button').first().click() // First button is the checkbox
+  })
 })
 
 // Custom command to check if task is completed
 Cypress.Commands.add('isTaskCompleted', (title) => {
-  cy.get('ul li').contains(title).should('have.css', 'text-decoration', 'line-through solid rgb(0, 0, 0)')
+  cy.contains(title).should('have.class', 'line-through')
 })
 
 // Custom command to check if task is not completed
 Cypress.Commands.add('isTaskNotCompleted', (title) => {
-  cy.get('ul li').contains(title).should('not.have.css', 'text-decoration', 'line-through solid rgb(0, 0, 0)')
+  cy.contains(title).should('not.have.class', 'line-through')
+})
+
+// Custom command to wait for tasks to load
+Cypress.Commands.add('waitForTasksToLoad', () => {
+  cy.contains('Loading tasks...').should('not.exist')
+})
+
+// Custom command to edit a task
+Cypress.Commands.add('editTask', (oldTitle, newTitle) => {
+  // Click edit button
+  cy.contains(oldTitle).closest('div').within(() => {
+    cy.get('svg').first().click() // First SVG is the edit button
+  })
+  
+  // Edit the title
+  cy.get('input[type="text"]').first().clear().type(newTitle)
+  
+  // Save
+  cy.contains('Save').click()
+  
+  // Verify the change
+  cy.contains(newTitle).should('be.visible')
 }) 

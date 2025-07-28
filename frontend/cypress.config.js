@@ -3,7 +3,9 @@ import { defineConfig } from 'cypress'
 export default defineConfig({
   e2e: {
     baseUrl: 'http://localhost:5173', // Vite default port
+    specPattern: 'test/e2e/e2e/**/*.cy.{js,jsx,ts,tsx}',
     supportFile: 'test/e2e/support/e2e.js',
+    fixturesFolder: 'test/e2e/fixtures',
     setupNodeEvents(on, config) {
       // implement node event listeners here
     },

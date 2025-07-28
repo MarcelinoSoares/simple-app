@@ -134,14 +134,14 @@ jobs:
     - name: Start frontend server
       working-directory: ./frontend
       run: |
-        npm run preview &
-        sleep 5
+        npm run dev &
+        sleep 10
 
     - name: Run E2E tests
       working-directory: ./frontend
       run: npm run test:e2e
       env:
-        CYPRESS_baseUrl: http://localhost:4173
+        CYPRESS_baseUrl: http://localhost:5173
 
   # Security Scan
   security-scan:

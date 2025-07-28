@@ -4,6 +4,7 @@ import TodoPage from '../support/pageObjects/TodoPage'
 describe('Visual Regression Tests', () => {
   beforeEach(() => {
     cy.fixture('users').as('users')
+    cy.clearLocalStorage()
   })
 
   it('should match login page snapshot', () => {
@@ -18,8 +19,8 @@ describe('Visual Regression Tests', () => {
     LoginPage.fillPassword(this.users.validUser.password)
     LoginPage.submit()
     
-    // Wait for page to load
-    cy.url().should('include', '/')
+    // Wait for page to load and tasks to load
+    TodoPage.waitForTasksToLoad()
     cy.takeSnapshot('dashboard-empty')
   })
 
@@ -30,8 +31,12 @@ describe('Visual Regression Tests', () => {
     LoginPage.fillPassword(this.users.validUser.password)
     LoginPage.submit()
     
+    // Wait for tasks to load
+    TodoPage.waitForTasksToLoad()
+    
     // Create a task
     TodoPage.createTodo('Test Task for Snapshot', 'This is a test task for visual regression testing')
+    cy.wait(1000) // Wait for task to be created
     
     // Take snapshot
     cy.takeSnapshot('dashboard-with-tasks')
@@ -44,11 +49,17 @@ describe('Visual Regression Tests', () => {
     LoginPage.fillPassword(this.users.validUser.password)
     LoginPage.submit()
     
+    // Wait for tasks to load
+    TodoPage.waitForTasksToLoad()
+    
     // Create and complete a task
     TodoPage.createTodo('Task to Complete', 'This task will be marked as completed')
+    cy.wait(1000) // Wait for task to be created
     
-    // Mark as completed (click on the task title)
-    cy.contains('Task to Complete').click()
+    // Mark as completed by clicking the checkbox
+    cy.contains('Task to Complete').closest('div').within(() => {
+      cy.get('button').first().click() // First button is the checkbox
+    })
     
     // Take snapshot
     cy.takeSnapshot('dashboard-completed-task')

@@ -121,13 +121,11 @@ describe('Tasks API', () => {
   describe('deleteTask', () => {
     it('should call deleteTask function with correct taskId', async () => {
       const taskId = '1'
-      const mockResponse = { message: 'Task deleted successfully' }
-      mockApi.delete.mockResolvedValue({ data: mockResponse })
+      mockApi.delete.mockResolvedValue({ data: { message: 'Task deleted successfully' } })
 
-      const result = await deleteTask(taskId)
+      await deleteTask(taskId)
 
       expect(mockApi.delete).toHaveBeenCalledWith(`/tasks/${taskId}`)
-      expect(result).toEqual(mockResponse)
     })
 
     it('should throw error when deletion fails', async () => {

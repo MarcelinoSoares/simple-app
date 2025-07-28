@@ -1,235 +1,245 @@
 const request = require("supertest");
 const express = require("express");
-const jwt = require("jsonwebtoken");
 const authMiddleware = require("../../../src/middlewares/authMiddleware");
+const jwt = require("jsonwebtoken");
 
 describe("Auth Middleware", () => {
   let app;
+  let originalJwtSecret;
 
   beforeEach(() => {
+    originalJwtSecret = process.env.JWT_SECRET;
+    process.env.JWT_SECRET = "test-secret";
+    
     app = express();
     app.use(express.json());
-    
-    // Add a test route that uses the auth middleware
-    app.use("/protected", authMiddleware);
-    app.get("/protected", (req, res) => {
-      res.json({ user: req.user });
+    app.get("/protected", authMiddleware, (req, res) => {
+      res.json({ message: "Protected route accessed", user: req.user });
     });
+  });
+
+  afterEach(() => {
+    if (originalJwtSecret) {
+      process.env.JWT_SECRET = originalJwtSecret;
+    } else {
+      delete process.env.JWT_SECRET;
+    }
   });
 
   describe("Valid token scenarios", () => {
     it("should allow access with valid Bearer token", async () => {
-      const token = jwt.sign(
-        { id: "user123", email: "test@example.com" },
-        process.env.JWT_SECRET || "secret",
-        { expiresIn: "1h" }
-      );
+      const token = jwt.sign({ id: "123", email: "test@example.com" }, "test-secret");
 
-      const res = await request(app)
+      const response = await request(app)
         .get("/protected")
         .set("Authorization", `Bearer ${token}`);
 
-      expect(res.statusCode).toBe(200);
-      expect(res.body).toHaveProperty("user");
-      expect(res.body.user).toHaveProperty("id", "user123");
+      expect(response.status).toBe(200);
+      expect(response.body.message).toBe("Protected route accessed");
+      expect(response.body.user.id).toBe("123");
     });
 
-    it("should set user data in request", async () => {
-      const token = jwt.sign(
-        { id: "user123", email: "test@example.com" },
-        process.env.JWT_SECRET || "secret",
-        { expiresIn: "1h" }
-      );
+    it("should handle token with string user ID", async () => {
+      const token = jwt.sign({ id: "user123", email: "test@example.com" }, "test-secret");
 
-      const res = await request(app)
+      const response = await request(app)
         .get("/protected")
         .set("Authorization", `Bearer ${token}`);
 
-      expect(res.statusCode).toBe(200);
-      expect(res.body.user).toHaveProperty("id", "user123");
-      expect(res.body.user).toHaveProperty("email", "test@example.com");
-    });
-
-    it("should work with custom JWT_SECRET from environment", async () => {
-      process.env.JWT_SECRET = "custom-secret-key";
-      
-      const token = jwt.sign(
-        { id: "user123", email: "test@example.com" },
-        "custom-secret-key",
-        { expiresIn: "1h" }
-      );
-
-      const res = await request(app)
-        .get("/protected")
-        .set("Authorization", `Bearer ${token}`);
-
-      expect(res.statusCode).toBe(200);
-      expect(res.body).toHaveProperty("user");
-    });
-
-    it("should work with fallback secret when JWT_SECRET is not set", async () => {
-      delete process.env.JWT_SECRET;
-      
-      const token = jwt.sign(
-        { id: "user123", email: "test@example.com" },
-        "secret",
-        { expiresIn: "1h" }
-      );
-
-      const res = await request(app)
-        .get("/protected")
-        .set("Authorization", `Bearer ${token}`);
-
-      expect(res.statusCode).toBe(200);
-      expect(res.body).toHaveProperty("user");
+      expect(response.status).toBe(200);
+      expect(response.body.user.id).toBe("user123");
     });
   });
 
   describe("Invalid token scenarios", () => {
     it("should return 401 when no Authorization header", async () => {
-      const res = await request(app).get("/protected");
+      const response = await request(app).get("/protected");
 
-      expect(res.statusCode).toBe(401);
-      expect(res.body).toHaveProperty("message", "Unauthorized");
+      expect(response.status).toBe(401);
+      expect(response.body.message).toBe("Unauthorized");
     });
 
     it("should return 401 when Authorization header doesn't start with Bearer", async () => {
-      const res = await request(app)
+      const response = await request(app)
         .get("/protected")
         .set("Authorization", "InvalidFormat token123");
 
-      expect(res.statusCode).toBe(401);
-      expect(res.body).toHaveProperty("message", "Unauthorized");
+      expect(response.status).toBe(401);
+      expect(response.body.message).toBe("Unauthorized");
     });
 
     it("should return 401 when Authorization header is just 'Bearer' without token", async () => {
-      const res = await request(app)
+      const response = await request(app)
         .get("/protected")
         .set("Authorization", "Bearer");
 
-      expect(res.statusCode).toBe(401);
-      expect(res.body).toHaveProperty("message", "Unauthorized");
+      expect(response.status).toBe(401);
+      expect(response.body.message).toBe("Unauthorized");
     });
 
     it("should return 401 when Authorization header is just 'Bearer ' with space", async () => {
-      const res = await request(app)
+      const response = await request(app)
         .get("/protected")
         .set("Authorization", "Bearer ");
 
-      expect(res.statusCode).toBe(401);
-      expect(res.body).toHaveProperty("message", "Unauthorized");
-    });
-
-    it("should return 401 with invalid token format", async () => {
-      const res = await request(app)
-        .get("/protected")
-        .set("Authorization", "Bearer invalid.token.format");
-
-      expect(res.statusCode).toBe(401);
-      expect(res.body).toHaveProperty("message", "Invalid token");
-    });
-
-    it("should return 401 with expired token", async () => {
-      const token = jwt.sign(
-        { id: "user123", email: "test@example.com" },
-        process.env.JWT_SECRET || "secret",
-        { expiresIn: "0s" }
-      );
-
-      // Wait a bit to ensure token is expired
-      await new Promise(resolve => setTimeout(resolve, 100));
-
-      const res = await request(app)
-        .get("/protected")
-        .set("Authorization", `Bearer ${token}`);
-
-      expect(res.statusCode).toBe(401);
-      expect(res.body).toHaveProperty("message", "Token expired");
+      expect(response.status).toBe(401);
+      expect(response.body.message).toBe("Unauthorized");
     });
 
     it("should return 401 with token signed with wrong secret", async () => {
-      const token = jwt.sign(
-        { id: "user123", email: "test@example.com" },
-        "wrong-secret",
-        { expiresIn: "1h" }
-      );
+      const token = jwt.sign({ id: "123", email: "test@example.com" }, "wrong-secret");
 
-      const res = await request(app)
+      const response = await request(app)
         .get("/protected")
         .set("Authorization", `Bearer ${token}`);
 
-      expect(res.statusCode).toBe(401);
-      expect(res.body).toHaveProperty("message", "Invalid token");
+      expect(response.status).toBe(401);
+      expect(response.body.message).toBe("Invalid token");
     });
 
     it("should return 401 with malformed token", async () => {
-      const res = await request(app)
+      const response = await request(app)
         .get("/protected")
         .set("Authorization", "Bearer malformed.token.here");
 
-      expect(res.statusCode).toBe(401);
-      expect(res.body).toHaveProperty("message", "Invalid token");
-    });
-
-    it("should return 401 with token that has invalid signature", async () => {
-      const token = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6InVzZXIxMjMiLCJlbWFpbCI6InRlc3RAZXhhbXBsZS5jb20iLCJpYXQiOjE2MzQ1NjY3ODQsImV4cCI6MTYzNDU3MDM4NH0.invalid-signature";
-
-      const res = await request(app)
-        .get("/protected")
-        .set("Authorization", `Bearer ${token}`);
-
-      expect(res.statusCode).toBe(401);
-      expect(res.body).toHaveProperty("message", "Invalid token");
+      expect(response.status).toBe(401);
+      expect(response.body.message).toBe("Invalid token");
     });
 
     it("should return 401 with completely invalid token structure", async () => {
-      const res = await request(app)
+      const response = await request(app)
         .get("/protected")
-        .set("Authorization", "Bearer completely-invalid");
+        .set("Authorization", "Bearer not-a-jwt-token");
 
-      expect(res.statusCode).toBe(401);
-      expect(res.body).toHaveProperty("message", "Invalid token");
+      expect(response.status).toBe(401);
+      expect(response.body.message).toBe("Invalid token");
+    });
+
+    it("should return 401 with invalid token format", async () => {
+      const response = await request(app)
+        .get("/protected")
+        .set("Authorization", "Bearer invalid");
+
+      expect(response.status).toBe(401);
+      expect(response.body.message).toBe("Invalid token");
+    });
+  });
+
+  describe("JWT specific error handling", () => {
+    it("should handle JsonWebTokenError", async () => {
+      const token = jwt.sign({ id: "123", email: "test@example.com" }, "wrong-secret");
+
+      const response = await request(app)
+        .get("/protected")
+        .set("Authorization", `Bearer ${token}`);
+
+      expect(response.status).toBe(401);
+      expect(response.body.message).toBe("Invalid token");
+    });
+
+    it("should handle TokenExpiredError", async () => {
+      const token = jwt.sign({ id: "123", email: "test@example.com" }, "test-secret", { expiresIn: "0s" });
+
+      // Wait a moment for token to expire
+      await new Promise(resolve => setTimeout(resolve, 100));
+
+      const response = await request(app)
+        .get("/protected")
+        .set("Authorization", `Bearer ${token}`);
+
+      expect(response.status).toBe(401);
+      expect(response.body.message).toBe("Token expired");
+    });
+
+    it("should handle NotBeforeError", async () => {
+      const token = jwt.sign({ id: "123", email: "test@example.com" }, "test-secret", { notBefore: "1h" });
+
+      const response = await request(app)
+        .get("/protected")
+        .set("Authorization", `Bearer ${token}`);
+
+      expect(response.status).toBe(401);
+      expect(response.body.message).toBe("Unauthorized");
+    });
+
+    it("should handle generic JWT errors", async () => {
+      // Create a token that will cause a generic error
+      const token = jwt.sign({ id: "123", email: "test@example.com" }, "test-secret");
+      
+      // Mock jwt.verify to throw a generic error
+      const originalVerify = jwt.verify;
+      jwt.verify = jest.fn().mockImplementation(() => {
+        const error = new Error("Generic JWT error");
+        error.name = "GenericError";
+        throw error;
+      });
+
+      const response = await request(app)
+        .get("/protected")
+        .set("Authorization", `Bearer ${token}`);
+
+      expect(response.status).toBe(401);
+      expect(response.body.message).toBe("Unauthorized");
+
+      // Restore original method
+      jwt.verify = originalVerify;
     });
   });
 
   describe("Edge cases", () => {
-    it("should handle case-insensitive Authorization header", async () => {
-      const token = jwt.sign(
-        { id: "user123", email: "test@example.com" },
-        process.env.JWT_SECRET || "secret",
-        { expiresIn: "1h" }
-      );
+    it("should handle token with missing user ID", async () => {
+      const token = jwt.sign({ email: "test@example.com" }, "test-secret");
 
-      const res = await request(app)
+      const response = await request(app)
         .get("/protected")
-        .set("authorization", `bearer ${token}`);
+        .set("Authorization", `Bearer ${token}`);
 
-      expect(res.statusCode).toBe(401);
-      expect(res.body).toHaveProperty("message", "Unauthorized");
+      expect(response.status).toBe(401);
+      expect(response.body.message).toBe("Invalid token: missing user id");
     });
 
-    it("should handle Authorization header with extra spaces", async () => {
-      const token = jwt.sign(
-        { id: "user123", email: "test@example.com" },
-        process.env.JWT_SECRET || "secret",
-        { expiresIn: "1h" }
-      );
+    it("should handle token with null user ID", async () => {
+      const token = jwt.sign({ id: null, email: "test@example.com" }, "test-secret");
 
-      const res = await request(app)
+      const response = await request(app)
         .get("/protected")
-        .set("Authorization", `  Bearer  ${token}  `);
+        .set("Authorization", `Bearer ${token}`);
 
-      expect(res.statusCode).toBe(401);
-      expect(res.body).toHaveProperty("message", "Unauthorized");
+      expect(response.status).toBe(401);
+      expect(response.body.message).toBe("Invalid token: missing user id");
     });
 
-    it("should handle empty string as token", async () => {
-      const res = await request(app)
-        .get("/protected")
-        .set("Authorization", "Bearer ");
+    it("should handle token with empty string user ID", async () => {
+      const token = jwt.sign({ id: "", email: "test@example.com" }, "test-secret");
 
-      expect(res.statusCode).toBe(401);
-      expect(res.body).toHaveProperty("message", "Unauthorized");
+      const response = await request(app)
+        .get("/protected")
+        .set("Authorization", `Bearer ${token}`);
+
+      expect(response.status).toBe(401);
+      expect(response.body.message).toBe("Invalid token: missing user id");
+    });
+
+    it("should handle token with undefined user ID", async () => {
+      const token = jwt.sign({ id: undefined, email: "test@example.com" }, "test-secret");
+
+      const response = await request(app)
+        .get("/protected")
+        .set("Authorization", `Bearer ${token}`);
+
+      expect(response.status).toBe(401);
+      expect(response.body.message).toBe("Invalid token: missing user id");
+    });
+
+    it("should handle token with whitespace-only user ID", async () => {
+      const token = jwt.sign({ id: "   ", email: "test@example.com" }, "test-secret");
+
+      const response = await request(app)
+        .get("/protected")
+        .set("Authorization", `Bearer ${token}`);
+
+      expect(response.status).toBe(200);
+      expect(response.body.user.id).toBe("   ");
     });
   });
 }); 

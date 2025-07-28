@@ -1,21 +1,23 @@
 class LoginPage {
   visit() {
-    cy.visit("/login");
+    cy.visitWithCleanState("/login");
   }
   fillEmail(email) {
-    cy.get("input[name='email']").clear().type(email);
+    cy.get("#email").clear().type(email);
   }
   fillPassword(password) {
-    cy.get("input[name='password']").clear().type(password);
+    cy.get("#password").clear().type(password);
   }
   submit() {
     cy.get("button[type='submit']").click();
   }
   assertLoginSuccess() {
-    cy.url().should("include", "/dashboard");
+    // After successful login, user should be redirected to the main page (not /dashboard)
+    cy.url().should("not.include", "/login");
+    cy.contains("Task Manager").should("be.visible");
   }
   assertLoginFailure() {
-    cy.contains("Invalid credentials").should("be.visible");
+    cy.contains("Login failed").should("be.visible");
   }
 }
 export default new LoginPage(); 

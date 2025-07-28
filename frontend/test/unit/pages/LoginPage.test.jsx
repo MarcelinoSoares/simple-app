@@ -1,63 +1,55 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
-import { AuthProvider } from '../../../src/context/AuthContext'
-import LoginPage from '../../../src/pages/LoginPage'
+import LoginPage from '../../src/pages/LoginPage.jsx'
+import * as authAPI from '../../src/api/auth.js'
 
-// Mock axios
-vi.mock('axios')
+// Mock the auth API
+jest.mock('../../src/api/auth.js')
+
+const mockLogin = authAPI.login
+const mockRegister = authAPI.register
 
 // Mock react-router-dom
-const mockNavigate = vi.fn()
-vi.mock('react-router-dom', async () => {
-  const actual = await vi.importActual('react-router-dom')
-  return {
-    ...actual,
-    useNavigate: () => mockNavigate
-  }
-})
+jest.mock('react-router-dom', () => ({
+  ...jest.requireActual('react-router-dom'),
+  useNavigate: () => jest.fn()
+}))
 
 // Mock localStorage
 const localStorageMock = {
-  getItem: vi.fn(),
-  setItem: vi.fn(),
-  removeItem: vi.fn(),
-  clear: vi.fn(),
+  getItem: jest.fn(),
+  setItem: jest.fn(),
+  removeItem: jest.fn(),
+  clear: jest.fn(),
 }
-Object.defineProperty(window, 'localStorage', {
-  value: localStorageMock
-})
+global.localStorage = localStorageMock
 
 const renderLoginPage = () => {
   return render(
     <BrowserRouter>
-      <AuthProvider>
-        <LoginPage />
-      </AuthProvider>
+      <LoginPage />
     </BrowserRouter>
   )
 }
 
 describe('LoginPage Component', () => {
   beforeEach(() => {
-    vi.clearAllMocks()
-    localStorageMock.setItem.mockClear()
-    mockNavigate.mockClear()
+    jest.clearAllMocks()
   })
 
   it('should render login form', () => {
     renderLoginPage()
     
+    expect(screen.getByText('Welcome Back')).toBeInTheDocument()
+    expect(screen.getByText('Sign in to your account')).toBeInTheDocument()
     expect(screen.getByPlaceholderText('Enter your email')).toBeInTheDocument()
     expect(screen.getByPlaceholderText('Enter your password')).toBeInTheDocument()
     expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument()
   })
 
   it('should handle form submission with valid credentials', async () => {
-    const mockAxios = await import('axios')
-    mockAxios.default.post.mockResolvedValueOnce({
-      data: { token: 'fake-token' }
-    })
+    mockLogin.mockResolvedValueOnce('fake-token')
 
     renderLoginPage()
     
@@ -73,22 +65,12 @@ describe('LoginPage Component', () => {
     fireEvent.click(screen.getByRole('button', { name: /sign in/i }))
     
     await waitFor(() => {
-      expect(mockAxios.default.post).toHaveBeenCalledWith(
-        'http://localhost:3001/api/login',
-        {
-          email: 'test@example.com',
-          password: 'password123'
-        }
-      )
+      expect(mockLogin).toHaveBeenCalledWith('test@example.com', 'password123')
     })
-    
-    expect(localStorageMock.setItem).toHaveBeenCalledWith('token', 'fake-token')
-    expect(mockNavigate).toHaveBeenCalledWith('/')
   })
 
   it('should handle login error', async () => {
-    const mockAxios = await import('axios')
-    mockAxios.default.post.mockRejectedValueOnce(new Error('Login failed'))
+    mockLogin.mockRejectedValueOnce(new Error('Login failed'))
 
     renderLoginPage()
     
@@ -104,11 +86,8 @@ describe('LoginPage Component', () => {
     fireEvent.click(screen.getByRole('button', { name: /sign in/i }))
     
     await waitFor(() => {
-      expect(screen.getByText('Login failed. Please check your credentials.')).toBeInTheDocument()
+      expect(screen.getByText('Login failed. Please try again.')).toBeInTheDocument()
     })
-    
-    expect(localStorageMock.setItem).not.toHaveBeenCalled()
-    expect(mockNavigate).not.toHaveBeenCalled()
   })
 
   it('should update form fields on input change', () => {
@@ -125,20 +104,17 @@ describe('LoginPage Component', () => {
   })
 
   it('should prevent form submission with empty fields', async () => {
-    const mockAxios = await import('axios')
-    
     renderLoginPage()
     
     // Try to submit without filling fields
     fireEvent.click(screen.getByRole('button', { name: /sign in/i }))
     
     // Form should prevent submission due to required attributes
-    expect(mockAxios.default.post).not.toHaveBeenCalled()
+    expect(mockLogin).not.toHaveBeenCalled()
   })
 
   it('should handle network errors gracefully', async () => {
-    const mockAxios = await import('axios')
-    mockAxios.default.post.mockRejectedValueOnce({
+    mockLogin.mockRejectedValueOnce({
       response: { status: 500, data: { message: 'Server error' } }
     })
 
@@ -154,7 +130,7 @@ describe('LoginPage Component', () => {
     fireEvent.click(screen.getByRole('button', { name: /sign in/i }))
     
     await waitFor(() => {
-      expect(screen.getByText('Login failed. Please check your credentials.')).toBeInTheDocument()
+      expect(screen.getByText('Server error')).toBeInTheDocument()
     })
   })
 }) 

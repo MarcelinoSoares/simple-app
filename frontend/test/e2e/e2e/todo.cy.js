@@ -5,7 +5,7 @@ import TodoPage from '../support/pageObjects/TodoPage';
 describe('Todo App - UI Automation', () => {
   beforeEach(() => {
     cy.fixture('users').as('users');
-    cy.visit('/');
+    cy.clearLocalStorage();
   });
 
   it('Login with valid credentials', function () {
@@ -31,6 +31,9 @@ describe('Todo App - UI Automation', () => {
     LoginPage.fillPassword(this.users.validUser.password);
     LoginPage.submit();
     
+    // Wait for tasks to load
+    TodoPage.waitForTasksToLoad();
+    
     // Create todo
     TodoPage.createTodo('Learn Cypress', 'Study Cypress testing framework');
     TodoPage.assertTodoVisible('Learn Cypress');
@@ -43,8 +46,12 @@ describe('Todo App - UI Automation', () => {
     LoginPage.fillPassword(this.users.validUser.password);
     LoginPage.submit();
     
+    // Wait for tasks to load
+    TodoPage.waitForTasksToLoad();
+    
     // Create and edit todo
     TodoPage.createTodo('Old Task', 'Initial description');
+    cy.wait(1000); // Wait for task to be created
     TodoPage.editTodo('Old Task', 'Updated Task');
     TodoPage.assertTodoVisible('Updated Task');
   });
@@ -56,8 +63,12 @@ describe('Todo App - UI Automation', () => {
     LoginPage.fillPassword(this.users.validUser.password);
     LoginPage.submit();
     
+    // Wait for tasks to load
+    TodoPage.waitForTasksToLoad();
+    
     // Create and delete todo
     TodoPage.createTodo('Temporary Task', 'Will be deleted');
+    cy.wait(1000); // Wait for task to be created
     TodoPage.deleteTodo('Temporary Task');
     TodoPage.assertTodoNotVisible('Temporary Task');
   });
