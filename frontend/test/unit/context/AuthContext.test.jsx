@@ -21,7 +21,7 @@ vi.mock('../../../src/api/auth', () => ({
 
 // Test component to access context
 const TestComponent = () => {
-  const { isAuthenticated, loading, login, logout } = useAuth()
+  const { isAuthenticated, loading, login, register, logout } = useAuth()
   
   const handleLogin = async () => {
     try {
@@ -29,6 +29,15 @@ const TestComponent = () => {
     } catch (error) {
       // Handle error silently for testing
       console.error('Login error:', error.message)
+    }
+  }
+
+  const handleRegister = async () => {
+    try {
+      await register('newuser@example.com', 'password')
+    } catch (error) {
+      // Handle error silently for testing
+      console.error('Register error:', error.message)
     }
   }
   
@@ -39,11 +48,20 @@ const TestComponent = () => {
       <button onClick={handleLogin} data-testid="login-btn">
         Login
       </button>
+      <button onClick={handleRegister} data-testid="register-btn">
+        Register
+      </button>
       <button onClick={logout} data-testid="logout-btn">
         Logout
       </button>
     </div>
   )
+}
+
+// Test component to test useAuth error
+const TestComponentWithoutProvider = () => {
+  const auth = useAuth()
+  return <div data-testid="auth">{auth.isAuthenticated.toString()}</div>
 }
 
 const renderWithAuth = (component) => {
@@ -134,6 +152,25 @@ describe('AuthContext', () => {
       expect(mockAuthApi.login).toHaveBeenCalledWith('test@example.com', 'password')
     })
 
+    it('should provide register function', async () => {
+      mockAuthApi.register.mockResolvedValueOnce('new-token')
+      
+      renderWithAuth(<TestComponent />)
+      
+      // Wait for loading to finish
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 0))
+      })
+      
+      const registerButton = screen.getByTestId('register-btn')
+      
+      await act(async () => {
+        registerButton.click()
+      })
+      
+      expect(mockAuthApi.register).toHaveBeenCalledWith('newuser@example.com', 'password')
+    })
+
     it('should provide logout function', async () => {
       // Set token first
       localStorageMock.getItem.mockReturnValue('fake-token')
@@ -152,6 +189,12 @@ describe('AuthContext', () => {
       })
       
       expect(localStorageMock.removeItem).toHaveBeenCalledWith('token')
+    })
+
+    it('should throw error when used outside AuthProvider', () => {
+      expect(() => {
+        render(<TestComponentWithoutProvider />)
+      }).toThrow('useAuth must be used within an AuthProvider')
     })
   })
 
@@ -179,6 +222,29 @@ describe('AuthContext', () => {
       expect(screen.getByTestId('authenticated')).toHaveTextContent('true')
     })
 
+    it('should update state after successful registration', async () => {
+      mockAuthApi.register.mockResolvedValueOnce('new-token')
+      
+      renderWithAuth(<TestComponent />)
+      
+      // Wait for loading to finish
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 0))
+      })
+      
+      // Initially not authenticated
+      expect(screen.getByTestId('authenticated')).toHaveTextContent('false')
+      
+      // Perform registration
+      const registerButton = screen.getByTestId('register-btn')
+      await act(async () => {
+        registerButton.click()
+      })
+      
+      // Should be authenticated after registration
+      expect(screen.getByTestId('authenticated')).toHaveTextContent('true')
+    })
+
     it('should clear state after logout', async () => {
       // Set token first
       localStorageMock.getItem.mockReturnValue('fake-token')
@@ -200,6 +266,54 @@ describe('AuthContext', () => {
       })
       
       // Should not be authenticated after logout
+      expect(screen.getByTestId('authenticated')).toHaveTextContent('false')
+    })
+
+    it('should handle login errors', async () => {
+      const loginError = new Error('Login failed')
+      mockAuthApi.login.mockRejectedValueOnce(loginError)
+      
+      renderWithAuth(<TestComponent />)
+      
+      // Wait for loading to finish
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 0))
+      })
+      
+      // Initially not authenticated
+      expect(screen.getByTestId('authenticated')).toHaveTextContent('false')
+      
+      // Perform login (should fail)
+      const loginButton = screen.getByTestId('login-btn')
+      await act(async () => {
+        loginButton.click()
+      })
+      
+      // Should still not be authenticated after failed login
+      expect(screen.getByTestId('authenticated')).toHaveTextContent('false')
+    })
+
+    it('should handle registration errors', async () => {
+      const registerError = new Error('Registration failed')
+      mockAuthApi.register.mockRejectedValueOnce(registerError)
+      
+      renderWithAuth(<TestComponent />)
+      
+      // Wait for loading to finish
+      await act(async () => {
+        await new Promise(resolve => setTimeout(resolve, 0))
+      })
+      
+      // Initially not authenticated
+      expect(screen.getByTestId('authenticated')).toHaveTextContent('false')
+      
+      // Perform registration (should fail)
+      const registerButton = screen.getByTestId('register-btn')
+      await act(async () => {
+        registerButton.click()
+      })
+      
+      // Should still not be authenticated after failed registration
       expect(screen.getByTestId('authenticated')).toHaveTextContent('false')
     })
   })

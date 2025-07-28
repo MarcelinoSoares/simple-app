@@ -80,8 +80,6 @@ app.use("*", (req, res) => {
  * // - General server errors
  */
 app.use((err, req, res, next) => {
-  console.error("Error:", err);
-  
   // Handle JSON parsing errors
   if (err.type === 'entity.parse.failed') {
     if (err.statusCode === 400) {

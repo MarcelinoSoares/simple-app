@@ -73,9 +73,10 @@ function LoginPage() {
    * Handles input changes and clears validation errors
    * @function handleInputChange
    * @param {string} field - Field name (email or password)
-   * @param {string} value - New value
+   * @param {string} value - New input value
    */
   const handleInputChange = (field, value) => {
+    // Update field value
     if (field === 'email') {
       setEmail(value)
     } else if (field === 'password') {
@@ -83,7 +84,8 @@ function LoginPage() {
     }
 
     // Clear validation error for this field when user starts typing
-    if (validationErrors[field]) {
+    // This ensures we clear errors as soon as user starts correcting them
+    if (validationErrors[field] && value.length > 0) {
       setValidationErrors(prev => ({
         ...prev,
         [field]: ''
@@ -92,14 +94,20 @@ function LoginPage() {
   }
 
   /**
-   * Handles key press events for form submission
+   * Handles key press events on form inputs
    * @function handleKeyPress
-   * @param {KeyboardEvent} e - Key press event
+   * @param {KeyboardEvent} e - The keyboard event
    */
   const handleKeyPress = (e) => {
+    // Only handle Enter key
     if (e.key === 'Enter') {
       e.preventDefault()
-      handleSubmit(e)
+      e.stopPropagation()
+      
+      // Validate form before submitting
+      if (validateForm()) {
+        handleSubmit(e)
+      }
     }
   }
 
@@ -124,7 +132,9 @@ function LoginPage() {
             </svg>
           </div>
           <h1 className="text-white font-display font-bold text-3xl mb-2">Welcome Back</h1>
-          <p className="text-white/80 font-medium">Sign in to your account</p>
+          <p className="text-white/80 font-medium">
+            {isLogin ? 'Sign in to your account' : 'Create your account'}
+          </p>
         </div>
 
         {/* Form */}
@@ -140,7 +150,7 @@ function LoginPage() {
                 type="email"
                 value={email}
                 onChange={(e) => handleInputChange('email', e.target.value)}
-                onKeyPress={handleKeyPress}
+                onKeyDown={handleKeyPress}
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/40 focus:border-transparent transition-all duration-200"
                 placeholder="Enter your email"
                 required
@@ -160,7 +170,7 @@ function LoginPage() {
                 type="password"
                 value={password}
                 onChange={(e) => handleInputChange('password', e.target.value)}
-                onKeyPress={handleKeyPress}
+                onKeyDown={handleKeyPress}
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/40 focus:border-transparent transition-all duration-200"
                 placeholder="Enter your password"
                 required

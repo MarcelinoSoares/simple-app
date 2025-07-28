@@ -64,8 +64,6 @@ describe("Express App", () => {
       });
 
       testApp.use((err, req, res, next) => {
-        console.error("Error:", err);
-        
         // Handle JSON parsing errors
         if (err.type === 'entity.parse.failed') {
           if (err.statusCode === 400) {

@@ -203,15 +203,20 @@ function TodoPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {tasks.filter(task => task && (task._id || task.id)).map(task => (
-                <TaskItem
-                  key={task._id || task.id || Math.random()}
-                  task={task}
-                  onUpdate={handleUpdateTask}
-                  onDelete={handleDeleteTask}
-                  onToggleComplete={handleToggleComplete}
-                />
-              ))}
+              {tasks.filter(task => task && (task._id || task.id)).map(task => {
+                // Generate a unique key for each task, with fallback for edge cases
+                const taskKey = task._id || task.id || `temp-${Math.random().toString(36).substr(2, 9)}`
+                
+                return (
+                  <TaskItem
+                    key={taskKey}
+                    task={task}
+                    onUpdate={handleUpdateTask}
+                    onDelete={handleDeleteTask}
+                    onToggleComplete={handleToggleComplete}
+                  />
+                )
+              })}
             </div>
           )}
         </div>

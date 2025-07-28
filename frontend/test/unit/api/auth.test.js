@@ -1,21 +1,25 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 // Mock axios
-vi.mock('axios', () => ({
-  default: {
-    create: vi.fn(() => ({
-      post: vi.fn(),
-      get: vi.fn(),
-      put: vi.fn(),
-      delete: vi.fn(),
-      defaults: {
-        headers: {
-          common: {}
-        }
+vi.mock('axios', () => {
+  const mockApi = {
+    post: vi.fn(),
+    get: vi.fn(),
+    put: vi.fn(),
+    delete: vi.fn(),
+    defaults: {
+      headers: {
+        common: {}
       }
-    }))
+    }
   }
-}))
+  
+  return {
+    default: {
+      create: vi.fn(() => mockApi)
+    }
+  }
+})
 
 // Mock localStorage
 const localStorageMock = {
@@ -28,11 +32,85 @@ Object.defineProperty(window, 'localStorage', {
   value: localStorageMock
 })
 
-import { getToken, setToken, removeToken } from '../../../src/api/auth'
+import { login, register, getToken, setToken, removeToken, setupAuthHeader } from '../../../src/api/auth'
+import axios from 'axios'
 
 describe('Auth API', () => {
+  let mockApi
+
   beforeEach(() => {
     vi.clearAllMocks()
+    mockApi = axios.create()
+  })
+
+  describe('login', () => {
+    it('should login successfully and return token', async () => {
+      const mockResponse = { data: { token: 'fake-token' } }
+      mockApi.post.mockResolvedValue(mockResponse)
+
+      const result = await login('test@example.com', 'password123')
+
+      expect(mockApi.post).toHaveBeenCalledWith('/auth/login', {
+        email: 'test@example.com',
+        password: 'password123'
+      })
+      expect(result).toBe('fake-token')
+    })
+
+    it('should handle login error with response message', async () => {
+      const mockError = {
+        response: {
+          data: {
+            message: 'Invalid credentials'
+          }
+        }
+      }
+      mockApi.post.mockRejectedValue(mockError)
+
+      await expect(login('test@example.com', 'wrongpassword')).rejects.toThrow('Invalid credentials')
+    })
+
+    it('should handle login error without response message', async () => {
+      const mockError = new Error('Network error')
+      mockApi.post.mockRejectedValue(mockError)
+
+      await expect(login('test@example.com', 'password123')).rejects.toThrow('Login failed. Please try again.')
+    })
+  })
+
+  describe('register', () => {
+    it('should register successfully and return token', async () => {
+      const mockResponse = { data: { token: 'fake-token' } }
+      mockApi.post.mockResolvedValue(mockResponse)
+
+      const result = await register('newuser@example.com', 'password123')
+
+      expect(mockApi.post).toHaveBeenCalledWith('/auth/register', {
+        email: 'newuser@example.com',
+        password: 'password123'
+      })
+      expect(result).toBe('fake-token')
+    })
+
+    it('should handle registration error with response message', async () => {
+      const mockError = {
+        response: {
+          data: {
+            message: 'Email already exists'
+          }
+        }
+      }
+      mockApi.post.mockRejectedValue(mockError)
+
+      await expect(register('existing@example.com', 'password123')).rejects.toThrow('Email already exists')
+    })
+
+    it('should handle registration error without response message', async () => {
+      const mockError = new Error('Network error')
+      mockApi.post.mockRejectedValue(mockError)
+
+      await expect(register('newuser@example.com', 'password123')).rejects.toThrow('Registration failed. Please try again.')
+    })
   })
 
   describe('getToken', () => {
@@ -73,6 +151,49 @@ describe('Auth API', () => {
       removeToken()
 
       expect(localStorageMock.removeItem).toHaveBeenCalledWith('token')
+    })
+  })
+
+  describe('setupAuthHeader', () => {
+    it('should set Authorization header when token exists', () => {
+      localStorageMock.getItem.mockReturnValue('fake-token')
+
+      setupAuthHeader()
+
+      expect(mockApi.defaults.headers.common['Authorization']).toBe('Bearer fake-token')
+    })
+
+    it('should remove Authorization header when no token exists', () => {
+      localStorageMock.getItem.mockReturnValue(null)
+      mockApi.defaults.headers.common['Authorization'] = 'Bearer old-token'
+
+      setupAuthHeader()
+
+      expect(mockApi.defaults.headers.common['Authorization']).toBeUndefined()
+    })
+
+    it('should handle case when api.defaults is not available', () => {
+      localStorageMock.getItem.mockReturnValue('fake-token')
+      const originalDefaults = mockApi.defaults
+      delete mockApi.defaults
+
+      // Should not throw error
+      expect(() => setupAuthHeader()).not.toThrow()
+
+      // Restore for other tests
+      mockApi.defaults = originalDefaults
+    })
+
+    it('should handle case when api.defaults.headers is not available', () => {
+      localStorageMock.getItem.mockReturnValue('fake-token')
+      const originalHeaders = mockApi.defaults.headers
+      delete mockApi.defaults.headers
+
+      // Should not throw error
+      expect(() => setupAuthHeader()).not.toThrow()
+
+      // Restore for other tests
+      mockApi.defaults.headers = originalHeaders
     })
   })
 }) 

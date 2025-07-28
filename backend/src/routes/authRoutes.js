@@ -64,7 +64,6 @@ router.post("/login", async (req, res) => {
     
     res.json({ token });
   } catch (error) {
-    console.error('Login error:', error);
     res.status(500).json({ message: "Internal server error" });
   }
 });
@@ -98,21 +97,25 @@ router.post("/register", async (req, res) => {
     return res.status(400).json({ message: "Email and password are required" });
   }
   
-  // Check if user already exists
-  const existingUser = await User.findOne({ email });
-  if (existingUser) {
-    return res.status(400).json({ message: "User already exists" });
+  try {
+    // Check if user already exists
+    const existingUser = await User.findOne({ email });
+    if (existingUser) {
+      return res.status(400).json({ message: "User already exists" });
+    }
+    
+    // Create new user
+    const user = await User.create({ email, password });
+    
+    // Generate JWT token
+    const token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET || "secret", {
+      expiresIn: "1h",
+    });
+    
+    res.status(201).json({ token });
+  } catch (error) {
+    res.status(500).json({ message: "Internal server error" });
   }
-  
-  // Create new user
-  const user = await User.create({ email, password });
-  
-  // Generate JWT token
-  const token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET || "secret", {
-    expiresIn: "1h",
-  });
-  
-  res.status(201).json({ token });
 });
 
 module.exports = router; 

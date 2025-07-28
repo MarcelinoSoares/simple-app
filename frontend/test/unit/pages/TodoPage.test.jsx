@@ -258,4 +258,177 @@ describe('TodoPage Component', () => {
       expect(screen.getByText('Task Manager')).toBeInTheDocument()
     })
   })
+
+  it('should show loading state initially', async () => {
+    // Mock getTasks to delay resolution
+    getTasks.mockImplementation(() => new Promise(resolve => setTimeout(() => resolve([]), 100)))
+
+    renderTodoPage()
+
+    // Should show loading state
+    expect(screen.getByText('Loading tasks...')).toBeInTheDocument()
+  })
+
+  it('should handle logout button click', async () => {
+    getTasks.mockResolvedValueOnce([])
+
+    renderTodoPage()
+
+    await waitFor(() => {
+      expect(screen.getByText('Logout')).toBeInTheDocument()
+    })
+
+    const logoutButton = screen.getByText('Logout')
+    fireEvent.click(logoutButton)
+
+    expect(mockLogout).toHaveBeenCalled()
+  })
+
+  it('should handle task update errors', async () => {
+    const mockTasks = [{ _id: '1', title: 'Task 1', completed: false }]
+    getTasks.mockResolvedValueOnce(mockTasks)
+    updateTask.mockRejectedValueOnce(new Error('Update failed'))
+
+    renderTodoPage()
+
+    await waitFor(() => {
+      expect(screen.getByTestId('task-checkbox-1')).toBeInTheDocument()
+    })
+
+    const checkbox = screen.getByTestId('task-checkbox-1')
+    fireEvent.click(checkbox)
+
+    await waitFor(() => {
+      expect(updateTask).toHaveBeenCalledWith('1', { completed: true })
+    })
+  })
+
+  it('should handle task deletion errors', async () => {
+    const mockTasks = [{ _id: '1', title: 'Task 1', completed: false }]
+    getTasks.mockResolvedValueOnce(mockTasks)
+    deleteTask.mockRejectedValueOnce(new Error('Delete failed'))
+    
+    global.window.confirm = vi.fn(() => true)
+
+    renderTodoPage()
+
+    await waitFor(() => {
+      expect(screen.getByText('Task 1')).toBeInTheDocument()
+    })
+
+    const deleteButton = screen.getByTestId('delete-task-1')
+    fireEvent.click(deleteButton)
+
+    await waitFor(() => {
+      expect(deleteTask).toHaveBeenCalledWith('1')
+    })
+  })
+
+  it('should handle tasks with different ID formats', async () => {
+    const mockTasks = [
+      { _id: '1', title: 'Task 1', completed: false },
+      { id: '2', title: 'Task 2', completed: true },
+      { _id: '3', title: 'Task 3', completed: false }
+    ]
+    getTasks.mockResolvedValueOnce(mockTasks)
+
+    renderTodoPage()
+
+    await waitFor(() => {
+      expect(screen.getByText('Task 1')).toBeInTheDocument()
+      expect(screen.getByText('Task 2')).toBeInTheDocument()
+      expect(screen.getByText('Task 3')).toBeInTheDocument()
+    })
+  })
+
+  it('should handle tasks without valid IDs', async () => {
+    const mockTasks = [
+      { title: 'Task 1', completed: false }, // No ID
+      { _id: '2', title: 'Task 2', completed: true }
+    ]
+    getTasks.mockResolvedValueOnce(mockTasks)
+
+    renderTodoPage()
+
+    await waitFor(() => {
+      expect(screen.getByText('Task 2')).toBeInTheDocument()
+    })
+  })
+
+  it('should handle empty tasks array', async () => {
+    getTasks.mockResolvedValueOnce([])
+
+    renderTodoPage()
+
+    await waitFor(() => {
+      expect(screen.getByText('No tasks yet')).toBeInTheDocument()
+      expect(screen.getByText('Create your first task above')).toBeInTheDocument()
+    })
+  })
+
+  it('should handle handleToggleComplete function', async () => {
+    const mockTasks = [
+      { _id: '1', title: 'Task 1', completed: false },
+      { _id: '2', title: 'Task 2', completed: true }
+    ]
+    getTasks.mockResolvedValueOnce(mockTasks)
+    updateTask.mockResolvedValueOnce({ _id: '1', title: 'Task 1', completed: true })
+
+    renderTodoPage()
+
+    await waitFor(() => {
+      expect(screen.getByText('Task 1')).toBeInTheDocument()
+    })
+
+    const checkbox = screen.getByTestId('task-checkbox-1')
+    fireEvent.click(checkbox)
+
+    await waitFor(() => {
+      expect(updateTask).toHaveBeenCalledWith('1', { completed: true })
+    })
+  })
+
+  it('should filter out null or undefined tasks', async () => {
+    const mockTasks = [
+      { _id: '1', title: 'Task 1', completed: false },
+      null, // This should be filtered out
+      { _id: '2', title: 'Task 2', completed: true },
+      undefined // This should be filtered out
+    ]
+    getTasks.mockResolvedValueOnce(mockTasks)
+
+    renderTodoPage()
+
+    await waitFor(() => {
+      expect(screen.getByText('Task 1')).toBeInTheDocument()
+      expect(screen.getByText('Task 2')).toBeInTheDocument()
+      // Should not render null or undefined tasks
+      expect(screen.queryByText('null')).not.toBeInTheDocument()
+      expect(screen.queryByText('undefined')).not.toBeInTheDocument()
+    })
+  })
+
+  it('should handle tasks with Math.random fallback for missing IDs', async () => {
+    const tasksWithoutIds = [
+      { id: 'temp-1', title: 'Task 1', description: 'Description 1', completed: false },
+      { id: 'temp-2', title: 'Task 2', description: 'Description 2', completed: true }
+    ]
+
+    getTasks.mockResolvedValueOnce(tasksWithoutIds)
+
+    render(
+      <BrowserRouter>
+        <TodoPage />
+      </BrowserRouter>
+    )
+
+    await waitFor(() => {
+      expect(screen.getByText('Task 1')).toBeInTheDocument()
+      expect(screen.getByText('Task 2')).toBeInTheDocument()
+    })
+
+    // Should render tasks even without IDs using fallback keys
+    expect(screen.getByText('Task 1')).toBeInTheDocument()
+    expect(screen.getByText('Task 2')).toBeInTheDocument()
+  })
 }) 

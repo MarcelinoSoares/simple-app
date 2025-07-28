@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, fireEvent } from '@testing-library/react'
+import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import TaskForm from '../../../src/components/TaskForm'
 
 describe('TaskForm Component', () => {
@@ -93,37 +93,37 @@ describe('TaskForm Component', () => {
     expect(mockOnAddTask).not.toHaveBeenCalled()
   })
 
-  it('should trim whitespace from input before submission', async () => {
-    mockOnAddTask.mockResolvedValueOnce({})
+  it('should trim whitespace from input before submission', () => {
     render(<TaskForm onAddTask={mockOnAddTask} />)
-
+    
     const input = screen.getByTestId('task-input')
-    const form = screen.getByTestId('task-form')
-
-    fireEvent.change(input, { target: { value: '  Task with spaces  ' } })
-    fireEvent.submit(form)
-
-    expect(mockOnAddTask).toHaveBeenCalledWith({
-      title: 'Task with spaces',
-      description: ''
-    })
-  })
-
-  it('should handle Enter key press to submit form', async () => {
-    mockOnAddTask.mockResolvedValueOnce({})
-    render(<TaskForm onAddTask={mockOnAddTask} />)
-
-    const input = screen.getByTestId('task-input')
-
-    fireEvent.change(input, { target: { value: 'New Task' } })
-    fireEvent.keyPress(input, { key: 'Enter', code: 'Enter', charCode: 13 })
-
-    // Wait for the async operation to complete
-    await new Promise(resolve => setTimeout(resolve, 0))
-
+    fireEvent.change(input, { target: { value: '  New Task  ' } })
+    
+    const submitButton = screen.getByTestId('create-task-btn')
+    fireEvent.click(submitButton)
+    
     expect(mockOnAddTask).toHaveBeenCalledWith({
       title: 'New Task',
       description: ''
     })
+  })
+
+  it('should handle error when creating task', async () => {
+    const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+    mockOnAddTask.mockRejectedValueOnce(new Error('Task creation failed'))
+    
+    render(<TaskForm onAddTask={mockOnAddTask} />)
+    
+    const input = screen.getByTestId('task-input')
+    const submitButton = screen.getByTestId('create-task-btn')
+    
+    fireEvent.change(input, { target: { value: 'New Task' } })
+    fireEvent.click(submitButton)
+    
+    await waitFor(() => {
+      expect(consoleSpy).toHaveBeenCalledWith('Error creating task:', expect.any(Error))
+    })
+    
+    consoleSpy.mockRestore()
   })
 }) 

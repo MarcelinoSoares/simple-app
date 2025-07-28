@@ -53,7 +53,7 @@ const authMiddleware = (req, res, next) => {
     const decoded = jwt.verify(token, process.env.JWT_SECRET || "secret");
     
     // Validate that the token contains the required user id
-    if (!decoded.id) {
+    if (!decoded.id || decoded.id.toString().trim() === "") {
       return res.status(401).json({ message: "Invalid token: missing user id" });
     }
     

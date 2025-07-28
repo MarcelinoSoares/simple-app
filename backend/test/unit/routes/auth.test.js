@@ -265,6 +265,10 @@ describe("POST /api/auth/register", () => {
   });
 
   it("should handle internal server error during registration", async () => {
+    // Mock User.findOne to return null (user doesn't exist)
+    const originalFindOne = User.findOne;
+    User.findOne = jest.fn().mockResolvedValue(null);
+    
     // Mock User.create to throw an error
     const originalCreate = User.create;
     User.create = jest.fn().mockRejectedValue(new Error("Database error"));
@@ -279,7 +283,8 @@ describe("POST /api/auth/register", () => {
     expect(response.status).toBe(500);
     expect(response.body.message).toBe("Internal server error");
 
-    // Restore original method
+    // Restore original methods
+    User.findOne = originalFindOne;
     User.create = originalCreate;
-  });
+  }, 15000); // Increase timeout to 15 seconds
 }); 

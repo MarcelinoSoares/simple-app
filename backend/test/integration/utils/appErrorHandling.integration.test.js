@@ -30,7 +30,6 @@ describe('App Error Handling Integration Tests', () => {
 
       // Add the same error handler as in app.js
       testApp.use((err, req, res, next) => {
-        console.error(err);
         res.status(500).json({ message: "Internal Server Error" });
       });
 
@@ -56,7 +55,6 @@ describe('App Error Handling Integration Tests', () => {
 
       // Add the same error handler as in app.js
       testApp.use((err, req, res, next) => {
-        console.error(err);
         res.status(500).json({ message: "Internal Server Error" });
       });
 
@@ -80,7 +78,6 @@ describe('App Error Handling Integration Tests', () => {
 
       // Add the same error handler as in app.js
       testApp.use((err, req, res, next) => {
-        console.error(err);
         res.status(500).json({ message: "Internal Server Error" });
       });
 
@@ -103,7 +100,6 @@ describe('App Error Handling Integration Tests', () => {
 
       // Add the same error handler as in app.js
       testApp.use((err, req, res, next) => {
-        console.error(err);
         res.status(500).json({ message: "Internal Server Error" });
       });
 
@@ -215,7 +211,6 @@ describe('App Error Handling Integration Tests', () => {
 
       // Add an error handler that throws an error
       testApp.use((err, req, res, next) => {
-        console.error(err);
         // This would normally cause an unhandled error, but Express handles it
         res.status(500).json({ message: "Internal Server Error" });
       });
@@ -238,12 +233,10 @@ describe('App Error Handling Integration Tests', () => {
 
       // Add multiple error handlers
       testApp.use((err, req, res, next) => {
-        console.error('First error handler:', err.message);
         next(err);
       });
 
       testApp.use((err, req, res, next) => {
-        console.error('Second error handler:', err.message);
         res.status(500).json({ message: "Internal Server Error" });
       });
 

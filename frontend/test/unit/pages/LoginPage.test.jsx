@@ -1,136 +1,431 @@
 import React from 'react'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { BrowserRouter } from 'react-router-dom'
-import LoginPage from '../../src/pages/LoginPage.jsx'
-import * as authAPI from '../../src/api/auth.js'
+import { vi, describe, it, expect, beforeEach } from 'vitest'
+import LoginPage from '@/pages/LoginPage.jsx'
+import * as authAPI from '@/api/auth.js'
+import { AuthProvider } from '@/context/AuthContext.jsx'
 
 // Mock the auth API
-jest.mock('../../src/api/auth.js')
+vi.mock('@/api/auth.js')
 
-const mockLogin = authAPI.login
-const mockRegister = authAPI.register
+const mockLogin = vi.mocked(authAPI.login)
+const mockRegister = vi.mocked(authAPI.register)
 
 // Mock react-router-dom
-jest.mock('react-router-dom', () => ({
-  ...jest.requireActual('react-router-dom'),
-  useNavigate: () => jest.fn()
-}))
+vi.mock('react-router-dom', async (importOriginal) => {
+  const actual = await importOriginal()
+  return {
+    ...actual,
+    useNavigate: () => vi.fn()
+  }
+})
 
 // Mock localStorage
 const localStorageMock = {
-  getItem: jest.fn(),
-  setItem: jest.fn(),
-  removeItem: jest.fn(),
-  clear: jest.fn(),
+  getItem: vi.fn(),
+  setItem: vi.fn(),
+  removeItem: vi.fn(),
+  clear: vi.fn(),
 }
 global.localStorage = localStorageMock
 
 const renderLoginPage = () => {
   return render(
     <BrowserRouter>
+      <AuthProvider>
       <LoginPage />
+      </AuthProvider>
     </BrowserRouter>
   )
 }
 
-describe('LoginPage Component', () => {
+describe('LoginPage', () => {
   beforeEach(() => {
-    jest.clearAllMocks()
+    vi.clearAllMocks()
+    mockLogin.mockResolvedValue('test-token')
+    mockRegister.mockResolvedValue('test-token')
   })
 
-  it('should render login form', () => {
+  it('renders login form', () => {
     renderLoginPage()
     
     expect(screen.getByText('Welcome Back')).toBeInTheDocument()
-    expect(screen.getByText('Sign in to your account')).toBeInTheDocument()
-    expect(screen.getByPlaceholderText('Enter your email')).toBeInTheDocument()
-    expect(screen.getByPlaceholderText('Enter your password')).toBeInTheDocument()
-    expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument()
+    expect(screen.getByLabelText('Email Address')).toBeInTheDocument()
+    expect(screen.getByLabelText('Password')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Sign In' })).toBeInTheDocument()
   })
 
-  it('should handle form submission with valid credentials', async () => {
-    mockLogin.mockResolvedValueOnce('fake-token')
-
+  it('toggles between login and register modes', () => {
     renderLoginPage()
     
-    // Fill form
-    fireEvent.change(screen.getByPlaceholderText('Enter your email'), {
-      target: { value: 'test@example.com' }
-    })
-    fireEvent.change(screen.getByPlaceholderText('Enter your password'), {
-      target: { value: 'password123' }
-    })
+    const toggleButton = screen.getByRole('button', { name: "Don't have an account? Sign Up" })
+    fireEvent.click(toggleButton)
     
-    // Submit form
-    fireEvent.click(screen.getByRole('button', { name: /sign in/i }))
+    expect(screen.getByRole('button', { name: 'Sign Up' })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'Already have an account? Sign In' })).toBeInTheDocument()
+  })
+
+  it('handles successful login', async () => {
+    renderLoginPage()
+    
+    const emailInput = screen.getByLabelText('Email Address')
+    const passwordInput = screen.getByLabelText('Password')
+    const submitButton = screen.getByRole('button', { name: 'Sign In' })
+    
+    fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
+    fireEvent.change(passwordInput, { target: { value: 'password123' } })
+    fireEvent.click(submitButton)
     
     await waitFor(() => {
       expect(mockLogin).toHaveBeenCalledWith('test@example.com', 'password123')
     })
   })
 
-  it('should handle login error', async () => {
-    mockLogin.mockRejectedValueOnce(new Error('Login failed'))
-
+  it('handles successful registration', async () => {
     renderLoginPage()
     
-    // Fill form
-    fireEvent.change(screen.getByPlaceholderText('Enter your email'), {
-      target: { value: 'test@example.com' }
-    })
-    fireEvent.change(screen.getByPlaceholderText('Enter your password'), {
-      target: { value: 'wrongpassword' }
-    })
+    // Switch to register mode
+    const toggleButton = screen.getByRole('button', { name: "Don't have an account? Sign Up" })
+    fireEvent.click(toggleButton)
     
-    // Submit form
-    fireEvent.click(screen.getByRole('button', { name: /sign in/i }))
+    const emailInput = screen.getByLabelText('Email Address')
+    const passwordInput = screen.getByLabelText('Password')
+    const submitButton = screen.getByRole('button', { name: 'Sign Up' })
+    
+    fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
+    fireEvent.change(passwordInput, { target: { value: 'password123' } })
+    fireEvent.click(submitButton)
     
     await waitFor(() => {
-      expect(screen.getByText('Login failed. Please try again.')).toBeInTheDocument()
+      expect(mockRegister).toHaveBeenCalledWith('test@example.com', 'password123')
     })
   })
 
-  it('should update form fields on input change', () => {
+  it('handles login error', async () => {
+    mockLogin.mockRejectedValue(new Error('Invalid credentials'))
     renderLoginPage()
     
-    const emailInput = screen.getByPlaceholderText('Enter your email')
-    const passwordInput = screen.getByPlaceholderText('Enter your password')
+    const emailInput = screen.getByLabelText('Email Address')
+    const passwordInput = screen.getByLabelText('Password')
+    const submitButton = screen.getByRole('button', { name: 'Sign In' })
     
-    fireEvent.change(emailInput, { target: { value: 'new@example.com' } })
-    fireEvent.change(passwordInput, { target: { value: 'newpassword' } })
+    fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
+    fireEvent.change(passwordInput, { target: { value: 'wrongpassword' } })
+    fireEvent.click(submitButton)
     
-    expect(emailInput.value).toBe('new@example.com')
-    expect(passwordInput.value).toBe('newpassword')
+    await waitFor(() => {
+      expect(screen.getByText('Invalid credentials')).toBeInTheDocument()
+    })
   })
 
-  it('should prevent form submission with empty fields', async () => {
+  it('handles registration error', async () => {
+    mockRegister.mockRejectedValue(new Error('Email already exists'))
     renderLoginPage()
     
-    // Try to submit without filling fields
-    fireEvent.click(screen.getByRole('button', { name: /sign in/i }))
+    // Switch to register mode
+    const toggleButton = screen.getByRole('button', { name: "Don't have an account? Sign Up" })
+    fireEvent.click(toggleButton)
     
-    // Form should prevent submission due to required attributes
+    const emailInput = screen.getByLabelText('Email Address')
+    const passwordInput = screen.getByLabelText('Password')
+    const submitButton = screen.getByRole('button', { name: 'Sign Up' })
+    
+    fireEvent.change(emailInput, { target: { value: 'existing@example.com' } })
+    fireEvent.change(passwordInput, { target: { value: 'password123' } })
+    fireEvent.click(submitButton)
+    
+    await waitFor(() => {
+      expect(screen.getByText('Email already exists')).toBeInTheDocument()
+    })
+  })
+
+  it('shows loading state during form submission', async () => {
+    mockLogin.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)))
+    renderLoginPage()
+    
+    const emailInput = screen.getByLabelText('Email Address')
+    const passwordInput = screen.getByLabelText('Password')
+    const submitButton = screen.getByRole('button', { name: 'Sign In' })
+    
+    fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
+    fireEvent.change(passwordInput, { target: { value: 'password123' } })
+    fireEvent.click(submitButton)
+    
+    expect(screen.getByText('Processing...')).toBeInTheDocument()
+  })
+
+  it('clears error when switching between login and register modes', async () => {
+    mockRegister.mockRejectedValue(new Error('Invalid credentials'))
+    renderLoginPage()
+    
+    // First switch to register mode
+    const toggleToRegisterButton = screen.getByRole('button', { name: "Don't have an account? Sign Up" })
+    fireEvent.click(toggleToRegisterButton)
+    
+    // Now trigger an error in register mode
+    const emailInput = screen.getByLabelText('Email Address')
+    const passwordInput = screen.getByLabelText('Password')
+    const submitButton = screen.getByRole('button', { name: 'Sign Up' })
+    
+    fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
+    fireEvent.change(passwordInput, { target: { value: 'wrongpassword' } })
+    fireEvent.click(submitButton)
+    
+    await waitFor(() => {
+      expect(screen.getByText('Invalid credentials')).toBeInTheDocument()
+    })
+    
+    // Now switch back to login mode - error should be cleared
+    const toggleToLoginButton = screen.getByRole('button', { name: 'Already have an account? Sign In' })
+    fireEvent.click(toggleToLoginButton)
+    
+    expect(screen.queryByText('Invalid credentials')).not.toBeInTheDocument()
+  })
+
+  it('should handle Enter key press to submit form', async () => {
+    renderLoginPage()
+    
+    const emailInput = screen.getByLabelText('Email Address')
+    const passwordInput = screen.getByLabelText('Password')
+    
+    fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
+    fireEvent.change(passwordInput, { target: { value: 'password123' } })
+    
+    // Press Enter on email input
+    fireEvent.keyDown(emailInput, { key: 'Enter', code: 'Enter' })
+    
+    await waitFor(() => {
+      expect(mockLogin).toHaveBeenCalledWith('test@example.com', 'password123')
+    })
+  })
+
+  it('should handle Enter key press on password input', async () => {
+    renderLoginPage()
+    
+    const emailInput = screen.getByLabelText('Email Address')
+    const passwordInput = screen.getByLabelText('Password')
+    
+    fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
+    fireEvent.change(passwordInput, { target: { value: 'password123' } })
+    
+    // Press Enter on password input
+    fireEvent.keyDown(passwordInput, { key: 'Enter', code: 'Enter' })
+    
+    await waitFor(() => {
+      expect(mockLogin).toHaveBeenCalledWith('test@example.com', 'password123')
+    })
+  })
+
+  it('should not submit form on non-Enter key press', async () => {
+    renderLoginPage()
+    
+    const emailInput = screen.getByLabelText('Email Address')
+    const passwordInput = screen.getByLabelText('Password')
+    
+    fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
+    fireEvent.change(passwordInput, { target: { value: 'password123' } })
+    
+    // Press Tab on email input (should not submit)
+    fireEvent.keyDown(emailInput, { key: 'Tab', code: 'Tab' })
+    
     expect(mockLogin).not.toHaveBeenCalled()
   })
 
-  it('should handle network errors gracefully', async () => {
-    mockLogin.mockRejectedValueOnce({
-      response: { status: 500, data: { message: 'Server error' } }
-    })
-
+  it('should not submit form when Enter is pressed but form is invalid', async () => {
     renderLoginPage()
     
-    fireEvent.change(screen.getByPlaceholderText('Enter your email'), {
-      target: { value: 'test@example.com' }
-    })
-    fireEvent.change(screen.getByPlaceholderText('Enter your password'), {
-      target: { value: 'password123' }
-    })
+    const emailInput = screen.getByLabelText('Email Address')
+    const passwordInput = screen.getByLabelText('Password')
     
-    fireEvent.click(screen.getByRole('button', { name: /sign in/i }))
+    // Fill only email, leave password empty (invalid form)
+    fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
+    fireEvent.change(passwordInput, { target: { value: '' } })
+    
+    // Press Enter on email input
+    fireEvent.keyDown(emailInput, { key: 'Enter', code: 'Enter' })
+    
+    // Should not call login because form is invalid
+    expect(mockLogin).not.toHaveBeenCalled()
+  })
+
+  it('should prevent default and stop propagation on Enter key', async () => {
+    renderLoginPage()
+    
+    const emailInput = screen.getByLabelText('Email Address')
+    const passwordInput = screen.getByLabelText('Password')
+    
+    fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
+    fireEvent.change(passwordInput, { target: { value: 'password123' } })
+    
+    // Create a mock event with preventDefault and stopPropagation
+    const mockEvent = {
+      key: 'Enter',
+      code: 'Enter',
+      preventDefault: vi.fn(),
+      stopPropagation: vi.fn()
+    }
+    
+    // Simulate keyDown event
+    fireEvent.keyDown(emailInput, mockEvent)
     
     await waitFor(() => {
-      expect(screen.getByText('Server error')).toBeInTheDocument()
+      expect(mockLogin).toHaveBeenCalledWith('test@example.com', 'password123')
     })
+  })
+
+  it('should display "Sign in to your account" text', () => {
+    renderLoginPage()
+    
+    expect(screen.getByText('Sign in to your account')).toBeInTheDocument()
+  })
+
+  it('should display "Don\'t have an account? Sign Up" text', () => {
+    renderLoginPage()
+    
+    expect(screen.getByText("Don't have an account? Sign Up")).toBeInTheDocument()
+  })
+
+  it('should not submit form when validation fails', async () => {
+    renderLoginPage()
+    
+    const submitButton = screen.getByRole('button', { name: 'Sign In' })
+    
+    // Try to submit without filling required fields
+    fireEvent.click(submitButton)
+    
+    // Should not call login
+    expect(mockLogin).not.toHaveBeenCalled()
+  })
+
+  it('should clear validation error when user starts typing', async () => {
+    renderLoginPage()
+    
+    const emailInput = screen.getByLabelText('Email Address')
+    const submitButton = screen.getByRole('button', { name: 'Sign In' })
+    
+    // First, trigger a validation error by submitting empty form
+    fireEvent.click(submitButton)
+    
+    // Now start typing in email field
+    fireEvent.change(emailInput, { target: { value: 'test@' } })
+    
+    // The validation error should be cleared
+    expect(screen.queryByText('Email is required')).not.toBeInTheDocument()
+  })
+
+  it('should show "Sign in to your account" text in login mode', () => {
+    renderLoginPage()
+    
+    expect(screen.getByText('Sign in to your account')).toBeInTheDocument()
+  })
+
+  it('should show different text in register mode', () => {
+    renderLoginPage()
+    
+    // Switch to register mode
+    const toggleButton = screen.getByRole('button', { name: "Don't have an account? Sign Up" })
+    fireEvent.click(toggleButton)
+    
+    // Should not show "Sign in to your account" text
+    expect(screen.queryByText('Sign in to your account')).not.toBeInTheDocument()
+  })
+
+  it('should show "Create your account" text in register mode', () => {
+    renderLoginPage()
+    
+    // Switch to register mode
+    const toggleButton = screen.getByRole('button', { name: "Don't have an account? Sign Up" })
+    fireEvent.click(toggleButton)
+    
+    // Should show "Create your account" text
+    expect(screen.getByText('Create your account')).toBeInTheDocument()
+  })
+
+  it('should clear password validation error when user starts typing', async () => {
+    renderLoginPage()
+    
+    const passwordInput = screen.getByLabelText('Password')
+    const submitButton = screen.getByRole('button', { name: 'Sign In' })
+    
+    // First, trigger a validation error by submitting empty form
+    fireEvent.click(submitButton)
+    
+    // Now start typing in password field
+    fireEvent.change(passwordInput, { target: { value: 'test' } })
+    
+    // The validation error should be cleared
+    expect(screen.queryByText('Password is required')).not.toBeInTheDocument()
+  })
+
+  it('should not submit form when validation fails on Enter key press', async () => {
+    renderLoginPage()
+    
+    const emailInput = screen.getByLabelText('Email Address')
+    
+    // Try to submit with empty form using Enter key
+    fireEvent.keyDown(emailInput, { key: 'Enter', code: 'Enter' })
+    
+    // Should not call login
+    expect(mockLogin).not.toHaveBeenCalled()
+  })
+
+  it('should show validation error for invalid email format', async () => {
+    renderLoginPage()
+    
+    const emailInput = screen.getByLabelText('Email Address')
+    const passwordInput = screen.getByLabelText('Password')
+    const submitButton = screen.getByRole('button', { name: 'Sign In' })
+    
+    // Fill with invalid email format that passes HTML5 validation but fails JS validation
+    fireEvent.change(emailInput, { target: { value: 'test@test' } })
+    fireEvent.change(passwordInput, { target: { value: 'password123' } })
+    
+    // Submit form
+    fireEvent.click(submitButton)
+    
+    // Should show validation error for invalid email
+    expect(screen.getByText('Please enter a valid email address')).toBeInTheDocument()
+    
+    // Should not call login
+    expect(mockLogin).not.toHaveBeenCalled()
+  })
+
+  it('should clear specific field validation error when user starts typing in that field', async () => {
+    renderLoginPage()
+    
+    const emailInput = screen.getByLabelText('Email Address')
+    const submitButton = screen.getByRole('button', { name: 'Sign In' })
+    
+    // First, trigger a validation error by submitting empty form
+    fireEvent.click(submitButton)
+    
+    // Now start typing in email field to clear the specific error
+    fireEvent.change(emailInput, { target: { value: 'test' } })
+    
+    // The email validation error should be cleared
+    expect(screen.queryByText('Email is required')).not.toBeInTheDocument()
+  })
+
+  it('should clear validation error when user types in field with existing error', async () => {
+    renderLoginPage()
+    
+    const emailInput = screen.getByLabelText('Email Address')
+    const passwordInput = screen.getByLabelText('Password')
+    
+    // Fill with invalid email format that passes HTML5 validation but fails JS validation
+    fireEvent.change(emailInput, { target: { value: 'test@test' } })
+    fireEvent.change(passwordInput, { target: { value: 'password123' } })
+    
+    // Submit form to trigger validation
+    const submitButton = screen.getByRole('button', { name: 'Sign In' })
+    fireEvent.click(submitButton)
+    
+    // Should show validation error for invalid email
+    expect(screen.getByText('Please enter a valid email address')).toBeInTheDocument()
+    
+    // Now type in email field - should clear email error
+    fireEvent.change(emailInput, { target: { value: 'test@example.com' } })
+    expect(screen.queryByText('Please enter a valid email address')).not.toBeInTheDocument()
   })
 }) 

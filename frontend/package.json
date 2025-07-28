@@ -10,6 +10,7 @@
     "cypress:run": "cypress run",
     "test:e2e": "node scripts/test-e2e-simple.js",
     "test:e2e:ci": "cypress run",
+    "test:e2e:preview": "cypress run --config baseUrl=http://localhost:4173",
     "test:e2e:open": "cypress open",
     "test:e2e:full": "node start-server-and-test.js",
     "test:e2e:direct": "cypress run",

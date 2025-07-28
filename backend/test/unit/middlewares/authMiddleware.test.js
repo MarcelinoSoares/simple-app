@@ -184,6 +184,29 @@ describe("Auth Middleware", () => {
       // Restore original method
       jwt.verify = originalVerify;
     });
+
+    it("should handle unknown JWT errors", async () => {
+      // Create a token that will cause an unknown error
+      const token = jwt.sign({ id: "123", email: "test@example.com" }, "test-secret");
+      
+      // Mock jwt.verify to throw an unknown error
+      const originalVerify = jwt.verify;
+      jwt.verify = jest.fn().mockImplementation(() => {
+        const error = new Error("Unknown JWT error");
+        error.name = "UnknownError";
+        throw error;
+      });
+
+      const response = await request(app)
+        .get("/protected")
+        .set("Authorization", `Bearer ${token}`);
+
+      expect(response.status).toBe(401);
+      expect(response.body.message).toBe("Unauthorized");
+
+      // Restore original method
+      jwt.verify = originalVerify;
+    });
   });
 
   describe("Edge cases", () => {
@@ -205,7 +228,7 @@ describe("Auth Middleware", () => {
         .get("/protected")
         .set("Authorization", `Bearer ${token}`);
 
-      expect(response.status).toBe(400);
+      expect(response.status).toBe(401);
       expect(response.body.message).toBe("Invalid token: missing user id");
     });
 
@@ -238,8 +261,8 @@ describe("Auth Middleware", () => {
         .get("/protected")
         .set("Authorization", `Bearer ${token}`);
 
-      expect(response.status).toBe(200);
-      expect(response.body.user.id).toBe("   ");
+      expect(response.status).toBe(401);
+      expect(response.body.message).toBe("Invalid token: missing user id");
     });
   });
 }); 

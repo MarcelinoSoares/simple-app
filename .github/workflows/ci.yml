@@ -134,16 +134,15 @@ jobs:
     - name: Start frontend server
       working-directory: ./frontend
       run: |
-        npm run dev &
-        sleep 15
+        # Use preview server instead of dev server to avoid crypto.hash error
+        npm run preview &
+        sleep 10
         # Wait for server to be ready
-        timeout 30 bash -c 'until curl -s http://localhost:5173 > /dev/null; do sleep 1; done'
+        timeout 30 bash -c 'until curl -s http://localhost:4173 > /dev/null; do sleep 1; done'
 
     - name: Run E2E tests
       working-directory: ./frontend
-      run: npm run test:e2e:ci
-      env:
-        CYPRESS_baseUrl: http://localhost:5173
+      run: npm run test:e2e:preview
 
   # Security Scan
   security-scan:

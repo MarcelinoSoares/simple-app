@@ -43,7 +43,6 @@ const connectToDatabase = async () => {
     await mongoose.connect(MONGODB_URI);
     console.log('Connected to MongoDB');
   } catch (error) {
-    console.error('MongoDB connection error:', error);
     process.exit(1);
   }
 };
@@ -69,7 +68,6 @@ connectToDatabase()
     startServer();
   })
   .catch((error) => {
-    console.error('Failed to start server:', error);
     process.exit(1);
   });
 

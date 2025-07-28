@@ -51,18 +51,23 @@ function TaskItem({ task, onUpdate, onDelete, onToggleComplete }) {
   const [loading, setLoading] = useState(false)
 
   /**
-   * Handles saving task edits
+   * Handles saving edited task data
    * @function handleSave
    * @description Saves edited task data and exits edit mode
    * @returns {Promise<void>} Resolves when task is updated
    */
   const handleSave = async () => {
-    if (!editTitle.trim()) return
+    // Validate that title is not empty before saving
+    const trimmedTitle = editTitle.trim()
+    if (!trimmedTitle) {
+      console.warn('Cannot save task with empty title')
+      return
+    }
     
     try {
       setLoading(true)
       await onUpdate(task._id, {
-        title: editTitle.trim(),
+        title: trimmedTitle,
         description: editDescription.trim()
       })
       setIsEditing(false)
@@ -86,21 +91,26 @@ function TaskItem({ task, onUpdate, onDelete, onToggleComplete }) {
   }
 
   /**
-   * Handles task deletion
+   * Handles task deletion with confirmation
    * @function handleDelete
-   * @description Deletes the task after confirmation
+   * @description Deletes the task after user confirmation
    * @returns {Promise<void>} Resolves when task is deleted
    */
   const handleDelete = async () => {
-    if (window.confirm('Are you sure you want to delete this task?')) {
-      try {
-        setLoading(true)
-        await onDelete(task._id)
-      } catch (error) {
-        console.error('Error deleting task:', error)
-      } finally {
-        setLoading(false)
-      }
+    // Show confirmation dialog and only proceed if user confirms
+    const userConfirmed = window.confirm('Are you sure you want to delete this task?')
+    if (!userConfirmed) {
+      console.log('Task deletion cancelled by user')
+      return
+    }
+
+    try {
+      setLoading(true)
+      await onDelete(task._id)
+    } catch (error) {
+      console.error('Error deleting task:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -119,15 +129,17 @@ function TaskItem({ task, onUpdate, onDelete, onToggleComplete }) {
   }
 
   /**
-   * Handles Enter key press in edit mode
-   * @function handleKeyPress
-   * @description Saves task when Enter is pressed in edit mode
+   * Handles key press events on form inputs
    * @param {KeyboardEvent} e - Keyboard event
    * @returns {void}
    */
   const handleKeyPress = (e) => {
+    // Only handle Enter key without Shift
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault()
+      e.stopPropagation()
+      
+      // Try to save, handleSave will validate and log warning if needed
       handleSave()
     }
   }
@@ -141,14 +153,14 @@ function TaskItem({ task, onUpdate, onDelete, onToggleComplete }) {
             type="text"
             value={editTitle}
             onChange={(e) => setEditTitle(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyPress}
             className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/40 focus:border-transparent"
             placeholder="Task title"
           />
           <textarea
             value={editDescription}
             onChange={(e) => setEditDescription(e.target.value)}
-            onKeyPress={handleKeyPress}
+            onKeyDown={handleKeyPress}
             className="w-full px-3 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/40 focus:border-transparent resize-none"
             placeholder="Task description (optional)"
             rows="2"
@@ -157,6 +169,7 @@ function TaskItem({ task, onUpdate, onDelete, onToggleComplete }) {
             <button
               onClick={handleSave}
               disabled={loading || !editTitle.trim()}
+              title="Save task"
               className="flex-1 bg-green-500 text-white px-3 py-2 rounded-lg hover:bg-green-600 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               {loading ? 'Saving...' : 'Save'}
