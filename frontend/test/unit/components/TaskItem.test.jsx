@@ -116,6 +116,26 @@ describe('TaskItem Component', () => {
     expect(mockOnDelete).not.toHaveBeenCalled()
   })
 
+  it('should log message when user cancels deletion confirmation', async () => {
+    global.window.confirm = vi.fn(() => false)
+    const consoleSpy = vi.spyOn(console, 'log').mockImplementation(() => {})
+    
+    render(
+      <TaskItem 
+        task={mockTask} 
+        onToggleComplete={mockOnToggleComplete} 
+        onDelete={mockOnDelete}
+        onUpdate={mockOnUpdate}
+      />
+    )
+
+    const deleteButton = screen.getByTestId('delete-task-1')
+    fireEvent.click(deleteButton)
+
+    expect(consoleSpy).toHaveBeenCalledWith('Task deletion cancelled by user')
+    consoleSpy.mockRestore()
+  })
+
   it('should have correct data-testid attributes', () => {
     render(
       <TaskItem 

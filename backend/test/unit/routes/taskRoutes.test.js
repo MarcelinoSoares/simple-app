@@ -302,6 +302,78 @@ describe('Task Routes', () => {
       // Restore original method
       mongoose.Types.ObjectId.isValid = originalIsValid;
     });
+
+    it('should handle general error during task save', async () => {
+      // Mock Task.findOne to return a task, but Task.save to throw an error
+      const originalFindOne = Task.findOne;
+      const originalSave = Task.prototype.save;
+      
+      Task.findOne = jest.fn().mockResolvedValue({
+        _id: testTask._id,
+        title: 'Original Task',
+        save: jest.fn().mockRejectedValue(new Error('Save error'))
+      });
+
+      const response = await request(app)
+        .put(`/api/tasks/${testTask._id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ title: 'Updated Task' })
+        .expect(500);
+
+      expect(response.body.message).toBe('Internal server error');
+
+      // Restore original methods
+      Task.findOne = originalFindOne;
+      Task.prototype.save = originalSave;
+    });
+
+    it('should handle general error during task save with different error type', async () => {
+      // Mock Task.findOne to return a task, but Task.save to throw a different error
+      const originalFindOne = Task.findOne;
+      const originalSave = Task.prototype.save;
+      
+      Task.findOne = jest.fn().mockResolvedValue({
+        _id: testTask._id,
+        title: 'Original Task',
+        save: jest.fn().mockRejectedValue(new Error('Database connection failed'))
+      });
+
+      const response = await request(app)
+        .put(`/api/tasks/${testTask._id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ title: 'Updated Task' })
+        .expect(500);
+
+      expect(response.body.message).toBe('Internal server error');
+
+      // Restore original methods
+      Task.findOne = originalFindOne;
+      Task.prototype.save = originalSave;
+    });
+
+    it('should handle general error during task save with non-CastError', async () => {
+      // Mock Task.findOne to return a task, but Task.save to throw a non-CastError
+      const originalFindOne = Task.findOne;
+      const originalSave = Task.prototype.save;
+      
+      Task.findOne = jest.fn().mockResolvedValue({
+        _id: testTask._id,
+        title: 'Original Task',
+        save: jest.fn().mockRejectedValue(new Error('Network timeout'))
+      });
+
+      const response = await request(app)
+        .put(`/api/tasks/${testTask._id}`)
+        .set('Authorization', `Bearer ${token}`)
+        .send({ title: 'Updated Task' })
+        .expect(500);
+
+      expect(response.body.message).toBe('Internal server error');
+
+      // Restore original methods
+      Task.findOne = originalFindOne;
+      Task.prototype.save = originalSave;
+    });
   });
 
   describe('DELETE /api/tasks/:id', () => {

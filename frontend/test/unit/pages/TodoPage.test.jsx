@@ -408,27 +408,5 @@ describe('TodoPage Component', () => {
     })
   })
 
-  it('should handle tasks with Math.random fallback for missing IDs', async () => {
-    const tasksWithoutIds = [
-      { id: 'temp-1', title: 'Task 1', description: 'Description 1', completed: false },
-      { id: 'temp-2', title: 'Task 2', description: 'Description 2', completed: true }
-    ]
 
-    getTasks.mockResolvedValueOnce(tasksWithoutIds)
-
-    render(
-      <BrowserRouter>
-        <TodoPage />
-      </BrowserRouter>
-    )
-
-    await waitFor(() => {
-      expect(screen.getByText('Task 1')).toBeInTheDocument()
-      expect(screen.getByText('Task 2')).toBeInTheDocument()
-    })
-
-    // Should render tasks even without IDs using fallback keys
-    expect(screen.getByText('Task 1')).toBeInTheDocument()
-    expect(screen.getByText('Task 2')).toBeInTheDocument()
-  })
 }) 

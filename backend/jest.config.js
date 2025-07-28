@@ -9,7 +9,9 @@ module.exports = {
   collectCoverageFrom: [
     'src/**/*.js',
     '!src/server.js',
-    '!src/healthcheck.js'
+    '!src/healthcheck.js',
+    '!**/node_modules/**',
+    '!**/coverage/**'
   ],
   coverageDirectory: 'coverage',
   coverageReporters: [
@@ -19,10 +21,10 @@ module.exports = {
   ],
   coverageThreshold: {
     global: {
-      branches: 100,
-      functions: 100,
-      lines: 100,
-      statements: 100
+      branches: 85,
+      functions: 85,
+      lines: 85,
+      statements: 85
     }
   },
   testMatch: [

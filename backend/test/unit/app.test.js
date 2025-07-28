@@ -67,166 +67,143 @@ describe('Express App', () => {
       expect(response.body).toHaveProperty('message', 'Invalid JSON format');
     });
 
-    it('should handle JSON parsing errors without statusCode 400', async () => {
-      // Create a custom error handler test
-      const testApp = require('express')();
-      testApp.use(require('body-parser').json());
-      
-      testApp.post('/test', (_req, _res) => {
-        throw new Error('JSON parsing error');
-      });
+    it('should handle JSON parsing errors without statusCode 400', () => {
+      const error = new Error('JSON parsing failed');
+      error.type = 'entity.parse.failed';
+      // No statusCode property
 
-      testApp.use((err, req, res, next) => {
-        if (err.type === 'entity.parse.failed') {
-          if (err.statusCode === 400) {
-            return res.status(400).json({ message: 'Invalid JSON format' });
-          }
-          return res.status(500).json({ message: 'Internal Server Error' });
-        }
-        next(err);
-      });
+      const req = {};
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      };
+      const next = jest.fn();
 
-      const response = await request(testApp)
-        .post('/test')
-        .set('Content-Type', 'application/json')
-        .send('{"invalid": json}')
-        .expect(400);
+      app._router.stack[app._router.stack.length - 1].handle(error, req, res, next);
 
-      expect(response.body).toHaveProperty('message', 'Invalid JSON format');
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({ message: 'Internal Server Error' });
     });
 
-    it('should handle validation errors', async () => {
-      const testApp = require('express')();
-      
-      testApp.post('/test', (_req, _res) => {
-        const error = new Error('Validation failed');
-        error.name = 'ValidationError';
-        throw error;
-      });
+    it('should handle JsonWebTokenError', () => {
+      const error = new Error('Invalid token');
+      error.name = 'JsonWebTokenError';
 
-      testApp.use((err, req, res, next) => {
-        if (err.name === 'ValidationError') {
-          return res.status(400).json({ message: err.message });
-        }
-        next(err);
-      });
+      const req = {};
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      };
+      const next = jest.fn();
 
-      const response = await request(testApp)
-        .post('/test')
-        .expect(400);
+      app._router.stack[app._router.stack.length - 1].handle(error, req, res, next);
 
-      expect(response.body).toHaveProperty('message', 'Validation failed');
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(res.json).toHaveBeenCalledWith({ message: 'Invalid token' });
     });
 
-    it('should handle JsonWebTokenError', async () => {
-      const testApp = require('express')();
-      
-      testApp.post('/test', (req, res) => {
-        const error = new Error('Invalid token');
-        error.name = 'JsonWebTokenError';
-        throw error;
-      });
+    it('should handle JSON parsing errors with different statusCode', () => {
+      const error = new Error('JSON parsing failed');
+      error.type = 'entity.parse.failed';
+      error.statusCode = 422; // Different status code
 
-      testApp.use((err, req, res, next) => {
-        if (err.name === 'JsonWebTokenError') {
-          return res.status(401).json({ message: "Invalid token" });
-        }
-        next(err);
-      });
+      const req = {};
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      };
+      const next = jest.fn();
 
-      const response = await request(testApp)
-        .post('/test')
-        .expect(401);
+      app._router.stack[app._router.stack.length - 1].handle(error, req, res, next);
 
-      expect(response.body).toHaveProperty('message', 'Invalid token');
+      expect(res.status).toHaveBeenCalledWith(500);
+      expect(res.json).toHaveBeenCalledWith({ message: 'Internal Server Error' });
     });
 
-    it('should handle TokenExpiredError', async () => {
-      const testApp = require('express')();
-      
-      testApp.post('/test', (req, res) => {
-        const error = new Error('Token expired');
-        error.name = 'TokenExpiredError';
-        throw error;
-      });
+    it('should handle validation errors', () => {
+      const error = new Error('Validation failed')
+      error.name = 'ValidationError'
 
-      testApp.use((err, req, res, next) => {
-        if (err.name === 'TokenExpiredError') {
-          return res.status(401).json({ message: "Token expired" });
-        }
-        next(err);
-      });
+      const req = {}
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      }
+      const next = jest.fn()
 
-      const response = await request(testApp)
-        .post('/test')
-        .expect(401);
+      app._router.stack[app._router.stack.length - 1].handle(error, req, res, next)
 
-      expect(response.body).toHaveProperty('message', 'Token expired');
-    });
+      expect(res.status).toHaveBeenCalledWith(400)
+      expect(res.json).toHaveBeenCalledWith({ message: 'Validation failed' })
+    })
 
-    it('should handle general errors with custom status', async () => {
-      const testApp = require('express')();
-      
-      testApp.post('/test', (req, res) => {
-        const error = new Error('Custom error');
-        error.status = 422;
-        throw error;
-      });
+    it('should handle TokenExpiredError', () => {
+      const error = new Error('Token expired')
+      error.name = 'TokenExpiredError'
 
-      testApp.use((err, req, res, next) => {
-        res.status(err.status || 500).json({ 
-          message: err.message || "Internal Server Error" 
-        });
-      });
+      const req = {}
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      }
+      const next = jest.fn()
 
-      const response = await request(testApp)
-        .post('/test')
-        .expect(422);
+      app._router.stack[app._router.stack.length - 1].handle(error, req, res, next)
 
-      expect(response.body).toHaveProperty('message', 'Custom error');
-    });
+      expect(res.status).toHaveBeenCalledWith(401)
+      expect(res.json).toHaveBeenCalledWith({ message: 'Token expired' })
+    })
 
-    it('should handle general errors without custom status', async () => {
-      const testApp = require('express')();
-      
-      testApp.post('/test', (req, res) => {
-        throw new Error('General error');
-      });
+    it('should handle general errors with custom status', () => {
+      const error = new Error('Custom error')
+      error.status = 422
 
-      testApp.use((err, req, res, next) => {
-        res.status(err.status || 500).json({ 
-          message: err.message || "Internal Server Error" 
-        });
-      });
+      const req = {}
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      }
+      const next = jest.fn()
 
-      const response = await request(testApp)
-        .post('/test')
-        .expect(500);
+      app._router.stack[app._router.stack.length - 1].handle(error, req, res, next)
 
-      expect(response.body).toHaveProperty('message', 'General error');
-    });
+      expect(res.status).toHaveBeenCalledWith(422)
+      expect(res.json).toHaveBeenCalledWith({ message: 'Custom error' })
+    })
 
-    it('should handle errors without message', async () => {
-      const testApp = require('express')();
-      
-      testApp.post('/test', (req, res) => {
-        const error = new Error();
-        error.status = 500;
-        throw error;
-      });
+    it('should handle general errors without custom status', () => {
+      const error = new Error('General error')
+      // No status property
 
-      testApp.use((err, req, res, next) => {
-        res.status(err.status || 500).json({ 
-          message: err.message || "Internal Server Error" 
-        });
-      });
+      const req = {}
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      }
+      const next = jest.fn()
 
-      const response = await request(testApp)
-        .post('/test')
-        .expect(500);
+      app._router.stack[app._router.stack.length - 1].handle(error, req, res, next)
 
-      expect(response.body).toHaveProperty('message', 'Internal Server Error');
-    });
+      expect(res.status).toHaveBeenCalledWith(500)
+      expect(res.json).toHaveBeenCalledWith({ message: 'General error' })
+    })
+
+    it('should handle errors without message', () => {
+      const error = new Error()
+      // No message property
+
+      const req = {}
+      const res = {
+        status: jest.fn().mockReturnThis(),
+        json: jest.fn()
+      }
+      const next = jest.fn()
+
+      app._router.stack[app._router.stack.length - 1].handle(error, req, res, next)
+
+      expect(res.status).toHaveBeenCalledWith(500)
+      expect(res.json).toHaveBeenCalledWith({ message: 'Internal Server Error' })
+    })
   });
 
   describe('CORS Configuration', () => {

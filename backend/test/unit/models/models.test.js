@@ -75,6 +75,56 @@ describe("User Model", () => {
     expect(isMatch).toBe(true);
     expect(isNotMatch).toBe(false);
   });
+
+  it("should not hash password when password is not modified", async () => {
+    const user = await User.create({ email: "test@example.com", password: "123456" });
+    const originalPassword = user.password;
+
+    // Simulate a scenario where password is not modified
+    user.email = "updated@example.com";
+    await user.save();
+
+    expect(user.password).toBe(originalPassword);
+  });
+
+  it("should not hash password when only other fields are modified", async () => {
+    const user = await User.create({ email: "test@example.com", password: "123456" });
+    const originalPassword = user.password;
+
+    // Mark password as not modified
+    user.markModified('email');
+    user.email = "another@example.com";
+    await user.save();
+
+    expect(user.password).toBe(originalPassword);
+  });
+
+  it("should not hash password when password field is explicitly marked as not modified", async () => {
+    const user = await User.create({ email: "test@example.com", password: "123456" });
+    const originalPassword = user.password;
+
+    // Explicitly mark password as not modified
+    user.markModified('email');
+    user.email = "explicit@example.com";
+    // Don't modify password field
+    await user.save();
+
+    expect(user.password).toBe(originalPassword);
+  });
+
+  it("should not hash password when only timestamps are updated", async () => {
+    const user = await User.create({ email: "test@example.com", password: "123456" });
+    const originalPassword = user.password;
+
+    // Wait a bit to ensure timestamp difference
+    await new Promise(resolve => setTimeout(resolve, 10));
+    
+    // Just touch the document to update timestamps
+    user.markModified('updatedAt');
+    await user.save();
+
+    expect(user.password).toBe(originalPassword);
+  });
 });
 
 describe("Task Model", () => {

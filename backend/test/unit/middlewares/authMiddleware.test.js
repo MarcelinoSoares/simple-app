@@ -264,5 +264,49 @@ describe("Auth Middleware", () => {
       expect(response.status).toBe(401);
       expect(response.body.message).toBe("Invalid token: missing user id");
     });
+
+    it("should handle token with user ID that is only spaces", async () => {
+      const token = jwt.sign({ id: "   ", email: "test@example.com" }, "test-secret");
+
+      const response = await request(app)
+        .get("/protected")
+        .set("Authorization", `Bearer ${token}`);
+
+      expect(response.status).toBe(401);
+      expect(response.body.message).toBe("Invalid token: missing user id");
+    });
+
+    it("should handle token with user ID that is only tabs", async () => {
+      const token = jwt.sign({ id: "\t\t\t", email: "test@example.com" }, "test-secret");
+
+      const response = await request(app)
+        .get("/protected")
+        .set("Authorization", `Bearer ${token}`);
+
+      expect(response.status).toBe(401);
+      expect(response.body.message).toBe("Invalid token: missing user id");
+    });
+
+    it("should handle token with user ID that is only newlines", async () => {
+      const token = jwt.sign({ id: "\n\n\n", email: "test@example.com" }, "test-secret");
+
+      const response = await request(app)
+        .get("/protected")
+        .set("Authorization", `Bearer ${token}`);
+
+      expect(response.status).toBe(401);
+      expect(response.body.message).toBe("Invalid token: missing user id");
+    });
+
+    it("should handle token with user ID that is only carriage returns", async () => {
+      const token = jwt.sign({ id: "\r\r\r", email: "test@example.com" }, "test-secret");
+
+      const response = await request(app)
+        .get("/protected")
+        .set("Authorization", `Bearer ${token}`);
+
+      expect(response.status).toBe(401);
+      expect(response.body.message).toBe("Invalid token: missing user id");
+    });
   });
 }); 
