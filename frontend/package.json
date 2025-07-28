@@ -8,7 +8,7 @@
     "preview": "vite preview",
     "cypress:open": "cypress open",
     "cypress:run": "cypress run",
-    "test:e2e": "node start-server-and-test.js",
+    "test:e2e": "node scripts/test-e2e-simple.js",
     "test:e2e:open": "cypress open",
     "test:e2e:full": "node start-server-and-test.js",
     "test:e2e:direct": "cypress run",
