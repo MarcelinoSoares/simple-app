@@ -59,10 +59,10 @@ function AppRoutes() {
 
   return (
     <Routes>
-      <Route path="/login" element={!isAuthenticated ? <LoginPage /> : <Navigate to="/" />} />
+      <Route path="/login" element={!isAuthenticated ? <LoginPage data-testid="login-page" /> : <Navigate to="/" />} />
       <Route
         path="/"
-        element={isAuthenticated ? <TodoPage /> : <Navigate to="/login" />}
+        element={isAuthenticated ? <TodoPage data-testid="todo-page" /> : <Navigate to="/login" />}
       />
     </Routes>
   )

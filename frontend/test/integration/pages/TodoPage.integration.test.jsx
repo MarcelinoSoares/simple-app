@@ -3,12 +3,43 @@ import { BrowserRouter } from 'react-router-dom';
 import { vi } from 'vitest';
 import TodoPage from '../../../src/pages/TodoPage';
 
-// Mock the API modules
+// Mock the API modules using hoisted
+const mockGetTasks = vi.hoisted(() => vi.fn());
+const mockCreateTask = vi.hoisted(() => vi.fn());
+const mockUpdateTask = vi.hoisted(() => vi.fn());
+const mockDeleteTask = vi.hoisted(() => vi.fn());
+
 vi.mock('../../../src/api/tasks', () => ({
-  getTasks: vi.fn(),
-  createTask: vi.fn(),
-  updateTask: vi.fn(),
-  deleteTask: vi.fn()
+  getTasks: mockGetTasks,
+  createTask: mockCreateTask,
+  updateTask: mockUpdateTask,
+  deleteTask: mockDeleteTask
+}));
+
+// Mock the auth API
+vi.mock('../../../src/api/auth', () => ({
+  default: {
+    get: vi.fn(),
+    post: vi.fn(),
+    put: vi.fn(),
+    delete: vi.fn()
+  },
+  getToken: vi.fn(),
+  setToken: vi.fn(),
+  removeToken: vi.fn(),
+  setupAuthHeader: vi.fn()
+}));
+
+// Mock axios globally
+vi.mock('axios', () => ({
+  default: {
+    create: vi.fn(() => ({
+      get: vi.fn(),
+      post: vi.fn(),
+      put: vi.fn(),
+      delete: vi.fn()
+    }))
+  }
 }));
 
 // Mock the useNavigate hook
@@ -31,7 +62,7 @@ vi.mock('../../../src/context/AuthContext', () => ({
 }));
 
 // Import mocked functions after mocking
-import { getTasks, createTask, updateTask, deleteTask } from '../../../src/api/tasks';
+// The mocks are now handled by the vi.mock() calls above
 
 const renderTodoPage = () => {
   return render(
@@ -45,7 +76,7 @@ describe('TodoPage Integration Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Set default mock implementations
-    getTasks.mockResolvedValue([]);
+    mockGetTasks.mockResolvedValue([]);
   });
 
   describe('Component Rendering', () => {
@@ -53,21 +84,21 @@ describe('TodoPage Integration Tests', () => {
       renderTodoPage();
 
       await waitFor(() => {
-        expect(screen.getByText(/my tasks/i)).toBeInTheDocument();
-        expect(screen.getByPlaceholderText(/add a new task/i)).toBeInTheDocument();
-        expect(screen.getByRole('button', { name: /add task/i })).toBeInTheDocument();
+        expect(screen.getByText(/task manager/i)).toBeInTheDocument();
+        expect(screen.getByPlaceholderText(/enter task title/i)).toBeInTheDocument();
+        expect(screen.getByRole('button', { name: /create task/i })).toBeInTheDocument();
         expect(screen.getByRole('button', { name: /logout/i })).toBeInTheDocument();
       });
     });
 
     it('should display loading state initially', async () => {
       // Mock getTasks to delay response
-      getTasks.mockImplementation(() => new Promise(resolve => setTimeout(() => resolve([]), 100)));
+      mockGetTasks.mockImplementation(() => new Promise(resolve => setTimeout(() => resolve([]), 100)));
       
       renderTodoPage();
 
       // The loading state shows a spinner
-      expect(screen.getByText(/loading tasks/i)).toBeInTheDocument();
+      expect(screen.getByText('Loading tasks...')).toBeInTheDocument();
     });
   });
 
@@ -77,35 +108,35 @@ describe('TodoPage Integration Tests', () => {
         { _id: '1', title: 'Task 1', completed: false },
         { _id: '2', title: 'Task 2', completed: true }
       ];
-      getTasks.mockResolvedValueOnce(mockTasks);
+      mockGetTasks.mockResolvedValueOnce(mockTasks);
 
       renderTodoPage();
 
       await waitFor(() => {
-        expect(screen.getByText('Task 1')).toBeInTheDocument();
-        expect(screen.getByText('Task 2')).toBeInTheDocument();
+        expect(screen.getByTestId('task-title-1')).toBeInTheDocument();
+        expect(screen.getByTestId('task-title-2')).toBeInTheDocument();
       });
 
-      expect(getTasks).toHaveBeenCalledTimes(1);
+      expect(mockGetTasks).toHaveBeenCalledTimes(1);
     });
 
     it('should display empty state when no tasks', async () => {
-      getTasks.mockResolvedValueOnce([]);
+      mockGetTasks.mockResolvedValueOnce([]);
 
       renderTodoPage();
 
       await waitFor(() => {
-        expect(screen.getByText(/no tasks yet/i)).toBeInTheDocument();
+        expect(screen.getByText('No tasks yet')).toBeInTheDocument();
       });
     });
 
     it('should handle task loading error', async () => {
-      getTasks.mockRejectedValueOnce(new Error('API Error'));
+      mockGetTasks.mockRejectedValueOnce(new Error('API Error'));
 
       renderTodoPage();
 
       await waitFor(() => {
-        expect(screen.getByText(/failed to fetch tasks/i)).toBeInTheDocument();
+        expect(screen.getByText('Failed to load tasks')).toBeInTheDocument();
       });
     });
   });
@@ -113,46 +144,44 @@ describe('TodoPage Integration Tests', () => {
   describe('Task Creation', () => {
     it('should create a new task successfully', async () => {
       const newTask = { _id: '1', title: 'New Task', completed: false };
-      createTask.mockResolvedValueOnce(newTask);
-      getTasks.mockResolvedValueOnce([]);
-      getTasks.mockResolvedValueOnce([newTask]);
+      mockCreateTask.mockResolvedValueOnce(newTask);
+      mockGetTasks.mockResolvedValueOnce([]);
 
       renderTodoPage();
 
       // Wait for loading to finish
       await waitFor(() => {
-        expect(screen.getByText(/no tasks yet/i)).toBeInTheDocument();
+        expect(screen.getByText('No tasks yet')).toBeInTheDocument();
       });
 
-      const input = screen.getByPlaceholderText(/add a new task/i);
-      const addButton = screen.getByRole('button', { name: /add task/i });
+      const input = screen.getByPlaceholderText('Enter task title...');
+      const addButton = screen.getByRole('button', { name: /create task/i });
 
       fireEvent.change(input, { target: { value: 'New Task' } });
       fireEvent.click(addButton);
 
       await waitFor(() => {
-        expect(createTask).toHaveBeenCalledWith({
+        expect(mockCreateTask).toHaveBeenCalledWith({
           title: 'New Task',
-          description: '',
-          completed: false
+          description: ''
         });
       });
     });
 
     it('should not create task with empty title', async () => {
-      getTasks.mockResolvedValueOnce([]);
+      mockGetTasks.mockResolvedValueOnce([]);
 
       renderTodoPage();
 
-      // Wait for loading to finish
+      // Wait for loading to finish and check for empty state
       await waitFor(() => {
-        expect(screen.getByText(/no tasks yet/i)).toBeInTheDocument();
+        expect(screen.getByText('No tasks yet')).toBeInTheDocument();
       });
 
-      const addButton = screen.getByRole('button', { name: /add task/i });
+      const addButton = screen.getByRole('button', { name: /create task/i });
       fireEvent.click(addButton);
 
-      expect(createTask).not.toHaveBeenCalled();
+      expect(mockCreateTask).not.toHaveBeenCalled();
     });
   });
 
@@ -161,20 +190,21 @@ describe('TodoPage Integration Tests', () => {
       const mockTasks = [
         { _id: '1', title: 'Task 1', completed: false }
       ];
-      getTasks.mockResolvedValueOnce(mockTasks);
-      updateTask.mockResolvedValueOnce({ ...mockTasks[0], completed: true });
+      mockGetTasks.mockResolvedValueOnce(mockTasks);
+      mockUpdateTask.mockResolvedValueOnce({ ...mockTasks[0], completed: true });
 
       renderTodoPage();
 
+      // Wait for tasks to load
       await waitFor(() => {
-        expect(screen.getByText('Task 1')).toBeInTheDocument();
+        expect(screen.getByTestId('task-title-1')).toBeInTheDocument();
       });
 
       const toggleButton = screen.getByTestId('task-checkbox-1');
       fireEvent.click(toggleButton);
 
       await waitFor(() => {
-        expect(updateTask).toHaveBeenCalledWith('1', { completed: true });
+        expect(mockUpdateTask).toHaveBeenCalledWith('1', { completed: true });
       });
     });
 
@@ -182,51 +212,57 @@ describe('TodoPage Integration Tests', () => {
       const mockTasks = [
         { _id: '1', title: 'Task 1', completed: false }
       ];
-      getTasks.mockResolvedValueOnce(mockTasks);
-      deleteTask.mockResolvedValueOnce({});
+      mockGetTasks.mockResolvedValueOnce(mockTasks);
+      mockDeleteTask.mockResolvedValueOnce({});
 
       renderTodoPage();
 
+      // Wait for tasks to load
       await waitFor(() => {
-        expect(screen.getByText('Task 1')).toBeInTheDocument();
+        expect(screen.getByTestId('task-title-1')).toBeInTheDocument();
       });
 
-      const deleteButtons = screen.getAllByTestId(/delete-task-/);
-      const deleteButton = deleteButtons[0];
+      const deleteButton = screen.getByTestId('delete-task-1');
+      
+      // Mock window.confirm to return true
+      const originalConfirm = window.confirm;
+      window.confirm = vi.fn(() => true);
+      
       fireEvent.click(deleteButton);
 
       await waitFor(() => {
-        expect(deleteTask).toHaveBeenCalledWith('1');
+        expect(mockDeleteTask).toHaveBeenCalledWith('1');
       });
+      
+      // Restore original confirm
+      window.confirm = originalConfirm;
     });
   });
 
   describe('User Interaction', () => {
     it('should submit task on Enter key press', async () => {
       const newTask = { _id: '1', title: 'New Task', completed: false };
-      createTask.mockResolvedValueOnce(newTask);
-      getTasks.mockResolvedValueOnce([]);
+      mockCreateTask.mockResolvedValueOnce(newTask);
+      mockGetTasks.mockResolvedValueOnce([]);
 
       renderTodoPage();
 
       // Wait for loading to finish
       await waitFor(() => {
-        expect(screen.getByText(/no tasks yet/i)).toBeInTheDocument();
+        expect(screen.getByText('No tasks yet')).toBeInTheDocument();
       });
 
-      const input = screen.getByPlaceholderText(/add a new task/i);
+      const input = screen.getByPlaceholderText('Enter task title...');
 
       fireEvent.change(input, { target: { value: 'New Task' } });
       
-      // Try different approaches for Enter key
-      fireEvent.keyDown(input, { key: 'Enter', code: 'Enter', charCode: 13 });
+      // Submit form with Enter key
       fireEvent.keyPress(input, { key: 'Enter', code: 'Enter', charCode: 13 });
 
       await waitFor(() => {
-        expect(createTask).toHaveBeenCalledWith({
+        expect(mockCreateTask).toHaveBeenCalledWith({
           title: 'New Task',
-          description: '',
-          completed: false
+          description: ''
         });
       });
     });

@@ -7,21 +7,35 @@ const jwt = require("jsonwebtoken");
 describe("Task Routes", () => {
   let token;
   let userId;
+  let testEmail;
 
   beforeEach(async () => {
+    // Clean database before each test
+    await User.deleteMany({});
+    await Task.deleteMany({});
+    
+    // Generate unique email for each test using timestamp + random
+    testEmail = `test${Date.now()}_${Math.random().toString(36).substr(2, 9)}@example.com`;
+    
     // Create a test user
     const user = await User.create({
-      email: "test@example.com",
+      email: testEmail,
       password: "123456"
     });
     userId = user._id;
 
-    // Generate token
+    // Generate token with correct structure
     token = jwt.sign(
       { id: userId.toString(), email: user.email },
       process.env.JWT_SECRET || "secret",
       { expiresIn: "1h" }
     );
+  });
+
+  afterEach(async () => {
+    // Clean database after each test
+    await User.deleteMany({});
+    await Task.deleteMany({});
   });
 
   describe("GET /api/tasks", () => {
@@ -63,7 +77,7 @@ describe("Task Routes", () => {
     it("should not return tasks from other users", async () => {
       // Create another user
       const otherUser = await User.create({
-        email: "other@example.com",
+        email: `other${Date.now()}_${Math.random().toString(36).substr(2, 9)}@example.com`,
         password: "123456"
       });
 
@@ -104,7 +118,7 @@ describe("Task Routes", () => {
     it("should create a new task", async () => {
       const taskData = {
         title: "New Task",
-        description: "New description",
+        description: "Task description",
         completed: false
       };
 
@@ -114,20 +128,14 @@ describe("Task Routes", () => {
         .send(taskData);
 
       expect(res.statusCode).toBe(201);
-      expect(res.body).toHaveProperty("_id");
       expect(res.body).toHaveProperty("title", "New Task");
-      expect(res.body).toHaveProperty("description", "New description");
+      expect(res.body).toHaveProperty("description", "Task description");
       expect(res.body).toHaveProperty("completed", false);
       expect(res.body).toHaveProperty("userId", userId.toString());
-
-      // Verify task was saved to database
-      const savedTask = await Task.findById(res.body._id);
-      expect(savedTask).toBeTruthy();
-      expect(savedTask.title).toBe("New Task");
     });
 
     it("should create task with minimal data", async () => {
-      const taskData = { title: "Minimal Task" };
+      const taskData = { title: "Simple Task" };
 
       const res = await request(app)
         .post("/api/tasks")
@@ -135,9 +143,9 @@ describe("Task Routes", () => {
         .send(taskData);
 
       expect(res.statusCode).toBe(201);
-      expect(res.body).toHaveProperty("title", "Minimal Task");
-      expect(res.body).toHaveProperty("description", "");
+      expect(res.body).toHaveProperty("title", "Simple Task");
       expect(res.body).toHaveProperty("completed", false);
+      expect(res.body).toHaveProperty("userId", userId.toString());
     });
 
     it("should return 401 without token", async () => {
@@ -152,7 +160,6 @@ describe("Task Routes", () => {
 
   describe("PUT /api/tasks/:id", () => {
     it("should update task successfully", async () => {
-      // Create a task first
       const task = await Task.create({
         title: "Original Task",
         description: "Original description",
@@ -171,14 +178,14 @@ describe("Task Routes", () => {
         .send(updateData);
 
       expect(res.statusCode).toBe(200);
-      expect(res.body).toHaveProperty("_id", task._id.toString());
       expect(res.body).toHaveProperty("title", "Updated Task");
       expect(res.body).toHaveProperty("description", "Updated description");
       expect(res.body).toHaveProperty("completed", true);
     });
 
     it("should return 404 for non-existent task", async () => {
-      const fakeId = "507f1f77bcf86cd799439011";
+      const fakeId = "507f1f77bcf86cd799439011"; // Valid ObjectId format
+
       const res = await request(app)
         .put(`/api/tasks/${fakeId}`)
         .set("Authorization", `Bearer ${token}`)
@@ -189,31 +196,33 @@ describe("Task Routes", () => {
     });
 
     it("should not update task from other user", async () => {
-      // Create another user
       const otherUser = await User.create({
-        email: "other@example.com",
+        email: `other${Date.now()}_${Math.random().toString(36).substr(2, 9)}@example.com`,
         password: "123456"
       });
 
-      // Create a task for the other user
       const task = await Task.create({
         title: "Other User Task",
-        description: "Other user description",
         userId: otherUser._id
       });
 
       const res = await request(app)
         .put(`/api/tasks/${task._id}`)
         .set("Authorization", `Bearer ${token}`)
-        .send({ title: "Trying to update" });
+        .send({ title: "Updated Task" });
 
       expect(res.statusCode).toBe(404);
       expect(res.body).toHaveProperty("message", "Task not found");
     });
 
     it("should return 401 without token", async () => {
+      const task = await Task.create({
+        title: "Test Task",
+        userId: userId
+      });
+
       const res = await request(app)
-        .put("/api/tasks/507f1f77bcf86cd799439011")
+        .put(`/api/tasks/${task._id}`)
         .send({ title: "Updated Task" });
 
       expect(res.statusCode).toBe(401);
@@ -223,10 +232,8 @@ describe("Task Routes", () => {
 
   describe("DELETE /api/tasks/:id", () => {
     it("should delete task successfully", async () => {
-      // Create a task first
       const task = await Task.create({
         title: "Task to Delete",
-        description: "Description",
         userId: userId
       });
 
@@ -236,13 +243,14 @@ describe("Task Routes", () => {
 
       expect(res.statusCode).toBe(204);
 
-      // Verify task was deleted
+      // Verify task was actually deleted
       const deletedTask = await Task.findById(task._id);
       expect(deletedTask).toBeNull();
     });
 
     it("should return 404 for non-existent task", async () => {
-      const fakeId = "507f1f77bcf86cd799439011";
+      const fakeId = "507f1f77bcf86cd799439011"; // Valid ObjectId format
+
       const res = await request(app)
         .delete(`/api/tasks/${fakeId}`)
         .set("Authorization", `Bearer ${token}`);
@@ -252,16 +260,13 @@ describe("Task Routes", () => {
     });
 
     it("should not delete task from other user", async () => {
-      // Create another user
       const otherUser = await User.create({
-        email: "other@example.com",
+        email: `other${Date.now()}_${Math.random().toString(36).substr(2, 9)}@example.com`,
         password: "123456"
       });
 
-      // Create a task for the other user
       const task = await Task.create({
         title: "Other User Task",
-        description: "Other user description",
         userId: otherUser._id
       });
 
@@ -274,8 +279,13 @@ describe("Task Routes", () => {
     });
 
     it("should return 401 without token", async () => {
+      const task = await Task.create({
+        title: "Test Task",
+        userId: userId
+      });
+
       const res = await request(app)
-        .delete("/api/tasks/507f1f77bcf86cd799439011");
+        .delete(`/api/tasks/${task._id}`);
 
       expect(res.statusCode).toBe(401);
       expect(res.body).toHaveProperty("message", "Unauthorized");

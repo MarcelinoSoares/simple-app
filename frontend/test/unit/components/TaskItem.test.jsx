@@ -9,8 +9,9 @@ describe('TaskItem Component', () => {
     completed: false
   }
 
-  const mockOnToggle = vi.fn()
+  const mockOnToggleComplete = vi.fn()
   const mockOnDelete = vi.fn()
+  const mockOnUpdate = vi.fn()
 
   beforeEach(() => {
     vi.clearAllMocks()
@@ -20,8 +21,9 @@ describe('TaskItem Component', () => {
     render(
       <TaskItem 
         task={mockTask} 
-        onToggle={mockOnToggle} 
-        onDelete={mockOnDelete} 
+        onToggleComplete={mockOnToggleComplete} 
+        onDelete={mockOnDelete}
+        onUpdate={mockOnUpdate}
       />
     )
 
@@ -34,8 +36,9 @@ describe('TaskItem Component', () => {
     render(
       <TaskItem 
         task={mockTask} 
-        onToggle={mockOnToggle} 
-        onDelete={mockOnDelete} 
+        onToggleComplete={mockOnToggleComplete} 
+        onDelete={mockOnDelete}
+        onUpdate={mockOnUpdate}
       />
     )
 
@@ -49,8 +52,9 @@ describe('TaskItem Component', () => {
     render(
       <TaskItem 
         task={completedTask} 
-        onToggle={mockOnToggle} 
-        onDelete={mockOnDelete} 
+        onToggleComplete={mockOnToggleComplete} 
+        onDelete={mockOnDelete}
+        onUpdate={mockOnUpdate}
       />
     )
 
@@ -58,27 +62,32 @@ describe('TaskItem Component', () => {
     expect(checkbox).toBeInTheDocument()
   })
 
-  it('should call onToggle when checkbox is clicked', () => {
+  it('should call onToggleComplete when checkbox is clicked', async () => {
     render(
       <TaskItem 
         task={mockTask} 
-        onToggle={mockOnToggle} 
-        onDelete={mockOnDelete} 
+        onToggleComplete={mockOnToggleComplete} 
+        onDelete={mockOnDelete}
+        onUpdate={mockOnUpdate}
       />
     )
 
     const checkbox = screen.getByTestId('task-checkbox-1')
     fireEvent.click(checkbox)
 
-    expect(mockOnToggle).toHaveBeenCalledWith('1', true)
+    expect(mockOnToggleComplete).toHaveBeenCalledWith('1', true)
   })
 
-  it('should call onDelete when delete button is clicked', () => {
+  it('should call onDelete when delete button is clicked', async () => {
+    // Mock window.confirm to return true
+    global.window.confirm = vi.fn(() => true)
+    
     render(
       <TaskItem 
         task={mockTask} 
-        onToggle={mockOnToggle} 
-        onDelete={mockOnDelete} 
+        onToggleComplete={mockOnToggleComplete} 
+        onDelete={mockOnDelete}
+        onUpdate={mockOnUpdate}
       />
     )
 
@@ -92,8 +101,9 @@ describe('TaskItem Component', () => {
     render(
       <TaskItem 
         task={mockTask} 
-        onToggle={mockOnToggle} 
-        onDelete={mockOnDelete} 
+        onToggleComplete={mockOnToggleComplete} 
+        onDelete={mockOnDelete}
+        onUpdate={mockOnUpdate}
       />
     )
 
@@ -108,28 +118,27 @@ describe('TaskItem Component', () => {
     render(
       <TaskItem 
         task={completedTask} 
-        onToggle={mockOnToggle} 
-        onDelete={mockOnDelete} 
+        onToggleComplete={mockOnToggleComplete} 
+        onDelete={mockOnDelete}
+        onUpdate={mockOnUpdate}
       />
     )
 
     const taskTitle = screen.getByTestId('task-title-1')
     expect(taskTitle).toHaveClass('line-through')
-    expect(taskTitle).toHaveClass('text-gray-500')
   })
 
   it('should not apply completed class when task is incomplete', () => {
     render(
       <TaskItem 
         task={mockTask} 
-        onToggle={mockOnToggle} 
-        onDelete={mockOnDelete} 
+        onToggleComplete={mockOnToggleComplete} 
+        onDelete={mockOnDelete}
+        onUpdate={mockOnUpdate}
       />
     )
 
     const taskTitle = screen.getByTestId('task-title-1')
-    expect(taskTitle).toHaveClass('text-gray-900')
     expect(taskTitle).not.toHaveClass('line-through')
-    expect(taskTitle).not.toHaveClass('text-gray-500')
   })
 }) 

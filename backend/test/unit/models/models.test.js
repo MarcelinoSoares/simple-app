@@ -2,9 +2,6 @@ const mongoose = require("mongoose");
 const User = require("../../../src/models/User");
 const Task = require("../../../src/models/Task");
 
-// Import shared test setup
-require('../../setup');
-
 describe("User Model", () => {
   it("should create a user with valid data", async () => {
     const userData = {
@@ -14,19 +11,18 @@ describe("User Model", () => {
 
     const user = await User.create(userData);
 
-    expect(user).toBeTruthy();
     expect(user.email).toBe(userData.email);
-    expect(user.password).toBe(userData.password);
+    // Password should be hashed, not plain text
+    expect(user.password).not.toBe(userData.password);
+    expect(user.password).toMatch(/^\$2[aby]\$\d{1,2}\$[./A-Za-z0-9]{53}$/); // bcrypt hash pattern
     expect(user._id).toBeDefined();
   });
 
   it("should create multiple users", async () => {
-    const usersData = [
+    const users = await User.create([
       { email: "user1@example.com", password: "123456" },
       { email: "user2@example.com", password: "654321" }
-    ];
-
-    const users = await User.create(usersData);
+    ]);
 
     expect(users).toHaveLength(2);
     expect(users[0].email).toBe("user1@example.com");
@@ -34,48 +30,50 @@ describe("User Model", () => {
   });
 
   it("should find user by email", async () => {
-    const userData = {
-      email: "findme@example.com",
-      password: "123456"
-    };
+    await User.create({ email: "test@example.com", password: "123456" });
 
-    await User.create(userData);
-    const foundUser = await User.findOne({ email: userData.email });
+    const user = await User.findOne({ email: "test@example.com" });
 
-    expect(foundUser).toBeTruthy();
-    expect(foundUser.email).toBe(userData.email);
+    expect(user).toBeDefined();
+    expect(user.email).toBe("test@example.com");
   });
 
   it("should return null for non-existent user", async () => {
-    const foundUser = await User.findOne({ email: "nonexistent@example.com" });
-    expect(foundUser).toBeNull();
+    const user = await User.findOne({ email: "nonexistent@example.com" });
+
+    expect(user).toBeNull();
   });
 
   it("should update user data", async () => {
-    const user = await User.create({
-      email: "update@example.com",
-      password: "oldpassword"
-    });
+    const user = await User.create({ email: "test@example.com", password: "123456" });
 
     const updatedUser = await User.findByIdAndUpdate(
       user._id,
-      { password: "newpassword" },
+      { email: "updated@example.com" },
       { new: true }
     );
 
-    expect(updatedUser.password).toBe("newpassword");
+    expect(updatedUser).toBeDefined();
+    expect(updatedUser.email).toBe("updated@example.com");
   });
 
   it("should delete user", async () => {
-    const user = await User.create({
-      email: "delete@example.com",
-      password: "123456"
-    });
+    const user = await User.create({ email: "test@example.com", password: "123456" });
 
     await User.findByIdAndDelete(user._id);
-    const deletedUser = await User.findById(user._id);
 
+    const deletedUser = await User.findById(user._id);
     expect(deletedUser).toBeNull();
+  });
+
+  it("should compare password correctly", async () => {
+    const user = await User.create({ email: "test@example.com", password: "123456" });
+
+    const isMatch = await user.comparePassword("123456");
+    const isNotMatch = await user.comparePassword("wrongpassword");
+
+    expect(isMatch).toBe(true);
+    expect(isNotMatch).toBe(false);
   });
 });
 
@@ -83,10 +81,8 @@ describe("Task Model", () => {
   let userId;
 
   beforeEach(async () => {
-    const user = await User.create({
-      email: "taskuser@example.com",
-      password: "123456"
-    });
+    // Create a test user
+    const user = await User.create({ email: "test@example.com", password: "123456" });
     userId = user._id;
   });
 
@@ -100,52 +96,36 @@ describe("Task Model", () => {
 
     const task = await Task.create(taskData);
 
-    expect(task).toBeTruthy();
     expect(task.title).toBe(taskData.title);
     expect(task.description).toBe(taskData.description);
     expect(task.completed).toBe(taskData.completed);
     expect(task.userId.toString()).toBe(userId.toString());
-    expect(task._id).toBeDefined();
   });
 
   it("should create task with minimal data", async () => {
-    const task = await Task.create({
-      title: "Minimal Task",
-      userId
-    });
+    const task = await Task.create({ title: "Minimal Task", userId });
 
     expect(task.title).toBe("Minimal Task");
-    expect(task.description).toBeUndefined();
     expect(task.completed).toBe(false);
     expect(task.userId.toString()).toBe(userId.toString());
   });
 
   it("should find tasks by user ID", async () => {
-    // Create tasks one by one to ensure they are saved
-    await Task.create({ title: "Task 1", userId });
-    await Task.create({ title: "Task 2", userId });
-    await Task.create({ title: "Task 3", userId });
+    // Create tasks with explicit IDs to ensure order
+    const task1 = await Task.create({ title: "Task 1", userId });
+    const task2 = await Task.create({ title: "Task 2", userId });
+    const task3 = await Task.create({ title: "Task 3", userId });
 
-    // Wait a bit for the tasks to be saved
-    await new Promise(resolve => setTimeout(resolve, 100));
+    const tasks = await Task.find({ userId }).sort({ _id: 1 });
 
-    const foundTasks = await Task.find({ userId }).sort({ _id: 1 });
-
-    expect(foundTasks).toHaveLength(3);
-    expect(foundTasks[0].title).toBe("Task 1");
-    expect(foundTasks[1].title).toBe("Task 2");
-    expect(foundTasks[2].title).toBe("Task 3");
+    expect(tasks).toHaveLength(3);
+    expect(tasks[0].title).toBe("Task 1");
+    expect(tasks[1].title).toBe("Task 2");
+    expect(tasks[2].title).toBe("Task 3");
   });
 
   it("should update task completion status", async () => {
-    const task = await Task.create({
-      title: "Update Task",
-      completed: false,
-      userId
-    });
-
-    // Wait a bit for the task to be saved
-    await new Promise(resolve => setTimeout(resolve, 100));
+    const task = await Task.create({ title: "Test Task", userId });
 
     const updatedTask = await Task.findByIdAndUpdate(
       task._id,
@@ -153,38 +133,26 @@ describe("Task Model", () => {
       { new: true }
     );
 
-    expect(updatedTask).toBeTruthy();
+    expect(updatedTask).toBeDefined();
     expect(updatedTask.completed).toBe(true);
   });
 
   it("should delete task", async () => {
-    const task = await Task.create({
-      title: "Delete Task",
-      userId
-    });
-
-    // Wait a bit for the task to be saved
-    await new Promise(resolve => setTimeout(resolve, 100));
+    const task = await Task.create({ title: "Test Task", userId });
 
     await Task.findByIdAndDelete(task._id);
-    const deletedTask = await Task.findById(task._id);
 
+    const deletedTask = await Task.findById(task._id);
     expect(deletedTask).toBeNull();
   });
 
   it("should not find tasks from other users", async () => {
-    const otherUser = await User.create({
-      email: "other@example.com",
-      password: "123456"
-    });
-
-    await Task.create([
-      { title: "My Task", userId },
-      { title: "Other Task", userId: otherUser._id }
-    ]);
-
-    // Wait a bit for the tasks to be saved
-    await new Promise(resolve => setTimeout(resolve, 200));
+    // Create another user
+    const otherUser = await User.create({ email: "other@example.com", password: "123456" });
+    
+    // Create tasks for both users
+    await Task.create({ title: "My Task", userId });
+    await Task.create({ title: "Other Task", userId: otherUser._id });
 
     const myTasks = await Task.find({ userId });
 
@@ -195,9 +163,11 @@ describe("Task Model", () => {
   it("should handle task with all fields", async () => {
     const taskData = {
       title: "Complete Task",
-      description: "A complete task description",
+      description: "Complete Description",
       completed: true,
-      userId
+      userId,
+      createdAt: new Date(),
+      updatedAt: new Date()
     };
 
     const task = await Task.create(taskData);

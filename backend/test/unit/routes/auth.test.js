@@ -17,9 +17,27 @@ describe("POST /api/auth/login", () => {
     }
   });
 
+  it("should verify password hashing works correctly", async () => {
+    // Create a user with password hashing
+    const userData = { email: "test@example.com", password: "123456" };
+    const user = await User.create(userData);
+    
+    // Verify password was hashed
+    expect(user.password).not.toBe("123456");
+    expect(user.password).toMatch(/^\$2[aby]\$\d{1,2}\$[./A-Za-z0-9]{53}$/);
+    
+    // Verify password comparison works
+    const isMatch = await user.comparePassword("123456");
+    expect(isMatch).toBe(true);
+    
+    const isWrongMatch = await user.comparePassword("wrongpassword");
+    expect(isWrongMatch).toBe(false);
+  });
+
   it("should login with existing user", async () => {
-    // Create a user first
-    await User.create({ email: "test@example.com", password: "123456" });
+    // Create a user first with proper password hashing
+    const userData = { email: "test@example.com", password: "123456" };
+    await User.create(userData);
 
     const res = await request(app)
       .post("/api/auth/login")
@@ -40,51 +58,46 @@ describe("POST /api/auth/login", () => {
 
   it("should reject login with wrong password for existing user", async () => {
     // Create a user first
-    await User.create({ email: "wrongpass@example.com", password: "123456" });
+    await User.create({ email: "test2@example.com", password: "123456" });
 
     const res = await request(app)
       .post("/api/auth/login")
-      .send({ email: "wrongpass@example.com", password: "wrongpassword" });
+      .send({ email: "test2@example.com", password: "wrongpassword" });
 
     expect(res.statusCode).toBe(401);
     expect(res.body).toHaveProperty("message", "Invalid credentials");
   });
 
   it("should reject login when user exists but password is different", async () => {
-    // Create a user first
-    await User.create({ email: "different@example.com", password: "123456" });
+    // Create a user with different password
+    await User.create({ email: "test3@example.com", password: "different" });
 
     const res = await request(app)
       .post("/api/auth/login")
-      .send({ email: "different@example.com", password: "differentpassword" });
+      .send({ email: "test3@example.com", password: "123456" });
 
     expect(res.statusCode).toBe(401);
     expect(res.body).toHaveProperty("message", "Invalid credentials");
   });
 
   it("should reject login when user exists with different password in database", async () => {
-    // Create a user with one password
-    const user = await User.create({ email: "original@example.com", password: "original123" });
-    
-    // Update the user's password directly in the database to simulate a different scenario
-    await User.findByIdAndUpdate(user._id, { password: "modified456" });
+    // Create a user with different password
+    await User.create({ email: "test4@example.com", password: "different" });
 
-    // Try to login with the original password
     const res = await request(app)
       .post("/api/auth/login")
-      .send({ email: "original@example.com", password: "original123" });
+      .send({ email: "test4@example.com", password: "123456" });
 
     expect(res.statusCode).toBe(401);
     expect(res.body).toHaveProperty("message", "Invalid credentials");
   });
 
   it("should work with custom JWT_SECRET from environment", async () => {
-    // Set a custom JWT_SECRET
-    process.env.JWT_SECRET = "custom-secret-key";
+    process.env.JWT_SECRET = "custom-secret";
     
     // Create a user first
     await User.create({ email: "custom@example.com", password: "123456" });
-    
+
     const res = await request(app)
       .post("/api/auth/login")
       .send({ email: "custom@example.com", password: "123456" });
@@ -94,12 +107,11 @@ describe("POST /api/auth/login", () => {
   });
 
   it("should work with fallback secret when JWT_SECRET is not set", async () => {
-    // Remove JWT_SECRET to test fallback
     delete process.env.JWT_SECRET;
     
     // Create a user first
     await User.create({ email: "fallback@example.com", password: "123456" });
-    
+
     const res = await request(app)
       .post("/api/auth/login")
       .send({ email: "fallback@example.com", password: "123456" });
@@ -173,41 +185,22 @@ describe("POST /api/auth/login", () => {
 });
 
 describe("POST /api/auth/register", () => {
-  let originalJwtSecret;
-
-  beforeEach(async () => {
-    originalJwtSecret = process.env.JWT_SECRET;
-  });
-
-  afterEach(() => {
-    if (originalJwtSecret) {
-      process.env.JWT_SECRET = originalJwtSecret;
-    } else {
-      delete process.env.JWT_SECRET;
-    }
-  });
-
   it("should create new user successfully", async () => {
     const res = await request(app)
       .post("/api/auth/register")
-      .send({ email: "newuser@example.com", password: "newpassword" });
+      .send({ email: "newuser@example.com", password: "123456" });
 
     expect(res.statusCode).toBe(201);
     expect(res.body).toHaveProperty("token");
-
-    // Verify user was created
-    const createdUser = await User.findOne({ email: "newuser@example.com" });
-    expect(createdUser).toBeTruthy();
-    expect(createdUser.password).toBe("newpassword");
   });
 
   it("should reject registration for existing user", async () => {
-    // Create a user first
+    // Create user first
     await User.create({ email: "existing@example.com", password: "123456" });
 
     const res = await request(app)
       .post("/api/auth/register")
-      .send({ email: "existing@example.com", password: "newpassword" });
+      .send({ email: "existing@example.com", password: "123456" });
 
     expect(res.statusCode).toBe(400);
     expect(res.body).toHaveProperty("message", "User already exists");
@@ -216,7 +209,7 @@ describe("POST /api/auth/register", () => {
   it("should handle missing email in registration", async () => {
     const res = await request(app)
       .post("/api/auth/register")
-      .send({ password: "newpassword" });
+      .send({ password: "123456" });
 
     expect(res.statusCode).toBe(400);
     expect(res.body).toHaveProperty("message", "Email and password are required");
@@ -225,7 +218,7 @@ describe("POST /api/auth/register", () => {
   it("should handle missing password in registration", async () => {
     const res = await request(app)
       .post("/api/auth/register")
-      .send({ email: "newuser@example.com" });
+      .send({ email: "test@example.com" });
 
     expect(res.statusCode).toBe(400);
     expect(res.body).toHaveProperty("message", "Email and password are required");

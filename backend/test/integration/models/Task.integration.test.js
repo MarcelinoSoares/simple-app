@@ -4,6 +4,7 @@ const User = require("../../../src/models/User");
 
 describe("Task Model Integration Tests", () => {
   let userId;
+  let testEmail;
 
   beforeAll(async () => {
     // Ensure we're connected to test database
@@ -13,12 +14,25 @@ describe("Task Model Integration Tests", () => {
   });
 
   beforeEach(async () => {
+    // Clean database before each test
+    await User.deleteMany({});
+    await Task.deleteMany({});
+    
+    // Generate unique email for each test using timestamp + random
+    testEmail = `test${Date.now()}_${Math.random().toString(36).substr(2, 9)}@example.com`;
+    
     // Create a test user
     const user = await User.create({
-      email: "test@example.com",
+      email: testEmail,
       password: "123456"
     });
     userId = user._id;
+  });
+
+  afterEach(async () => {
+    // Clean database after each test
+    await User.deleteMany({});
+    await Task.deleteMany({});
   });
 
   afterAll(async () => {
@@ -80,6 +94,7 @@ describe("Task Model Integration Tests", () => {
 
   describe("Task Queries", () => {
     beforeEach(async () => {
+      // Create tasks for testing
       await Task.create([
         { title: "Task 1", userId },
         { title: "Task 2", userId },
@@ -116,6 +131,7 @@ describe("Task Model Integration Tests", () => {
 
       expect(task).toBeDefined();
       expect(task.title).toBe("Task 1");
+      expect(task.userId.toString()).toBe(userId.toString());
     });
 
     it("should return null for non-existent task", async () => {
@@ -126,68 +142,65 @@ describe("Task Model Integration Tests", () => {
   });
 
   describe("Task Updates", () => {
-    let task;
+    let taskId;
 
     beforeEach(async () => {
-      task = await Task.create({
+      const task = await Task.create({
         title: "Original Task",
-        description: "Original Description",
-        completed: false,
+        description: "Original description",
         userId
       });
+      taskId = task._id;
     });
 
     it("should update task title", async () => {
       const updatedTask = await Task.findByIdAndUpdate(
-        task._id,
+        taskId,
         { title: "Updated Task" },
         { new: true }
       );
 
+      expect(updatedTask).toBeDefined();
       expect(updatedTask.title).toBe("Updated Task");
-      expect(updatedTask.description).toBe("Original Description");
-      expect(updatedTask.completed).toBe(false);
+      expect(updatedTask.description).toBe("Original description");
     });
 
     it("should update task completion status", async () => {
       const updatedTask = await Task.findByIdAndUpdate(
-        task._id,
+        taskId,
         { completed: true },
         { new: true }
       );
 
+      expect(updatedTask).toBeDefined();
       expect(updatedTask.completed).toBe(true);
-      expect(updatedTask.title).toBe("Original Task");
     });
 
     it("should update multiple fields", async () => {
       const updatedTask = await Task.findByIdAndUpdate(
-        task._id,
+        taskId,
         {
           title: "Updated Task",
-          description: "Updated Description",
+          description: "Updated description",
           completed: true
         },
         { new: true }
       );
 
+      expect(updatedTask).toBeDefined();
       expect(updatedTask.title).toBe("Updated Task");
-      expect(updatedTask.description).toBe("Updated Description");
+      expect(updatedTask.description).toBe("Updated description");
       expect(updatedTask.completed).toBe(true);
     });
   });
 
   describe("Task Deletion", () => {
-    let task;
-
-    beforeEach(async () => {
-      task = await Task.create({
+    it("should delete task by id", async () => {
+      const task = await Task.create({
         title: "Task to Delete",
         userId
       });
-    });
 
-    it("should delete task by id", async () => {
       await Task.findByIdAndDelete(task._id);
 
       const deletedTask = await Task.findById(task._id);
@@ -195,89 +208,100 @@ describe("Task Model Integration Tests", () => {
     });
 
     it("should delete task by title", async () => {
-      await Task.findOneAndDelete({ userId, title: "Task to Delete" });
+      await Task.create({
+        title: "Task to Delete",
+        userId
+      });
 
-      const deletedTask = await Task.findById(task._id);
+      await Task.deleteOne({ userId, title: "Task to Delete" });
+
+      const deletedTask = await Task.findOne({ userId, title: "Task to Delete" });
       expect(deletedTask).toBeNull();
     });
 
     it("should delete all tasks for a user", async () => {
+      await Task.create([
+        { title: "Task 1", userId },
+        { title: "Task 2", userId },
+        { title: "Task 3", userId }
+      ]);
+
       await Task.deleteMany({ userId });
 
-      const tasks = await Task.find({ userId });
-      expect(tasks).toHaveLength(0);
+      const remainingTasks = await Task.find({ userId });
+      expect(remainingTasks).toHaveLength(0);
     });
   });
 
   describe("Task Relationships", () => {
-    let user1, user2;
+    let otherUserId;
 
     beforeEach(async () => {
-      user1 = await User.create({
-        email: "user1@example.com",
+      const otherUser = await User.create({
+        email: `other${Date.now()}_${Math.random().toString(36).substr(2, 9)}@example.com`,
         password: "123456"
       });
-      user2 = await User.create({
-        email: "user2@example.com",
-        password: "654321"
-      });
-
-      await Task.create([
-        { title: "User 1 Task", userId: user1._id },
-        { title: "User 2 Task", userId: user2._id }
-      ]);
+      otherUserId = otherUser._id;
     });
 
     it("should only return tasks for specific user", async () => {
-      const user1Tasks = await Task.find({ userId: user1._id });
-      const user2Tasks = await Task.find({ userId: user2._id });
+      await Task.create([
+        { title: "My Task 1", userId },
+        { title: "My Task 2", userId },
+        { title: "Other Task", userId: otherUserId }
+      ]);
 
-      expect(user1Tasks).toHaveLength(1);
-      expect(user1Tasks[0].title).toBe("User 1 Task");
+      const myTasks = await Task.find({ userId });
 
-      expect(user2Tasks).toHaveLength(1);
-      expect(user2Tasks[0].title).toBe("User 2 Task");
+      expect(myTasks).toHaveLength(2);
+      expect(myTasks.map(t => t.title)).toContain("My Task 1");
+      expect(myTasks.map(t => t.title)).toContain("My Task 2");
+      expect(myTasks.map(t => t.title)).not.toContain("Other Task");
     });
 
     it("should not return other user's tasks when querying by user", async () => {
-      const allTasks = await Task.find({});
-      expect(allTasks).toHaveLength(2);
+      await Task.create([
+        { title: "My Task", userId },
+        { title: "Other Task", userId: otherUserId }
+      ]);
 
-      const user1Tasks = await Task.find({ userId: user1._id });
-      expect(user1Tasks).toHaveLength(1);
-      expect(user1Tasks[0].userId.toString()).toBe(user1._id.toString());
+      const otherUserTasks = await Task.find({ userId: otherUserId });
+
+      expect(otherUserTasks).toHaveLength(1);
+      expect(otherUserTasks[0].title).toBe("Other Task");
     });
   });
 
   describe("Database Operations", () => {
     it("should handle concurrent task creation", async () => {
-      const taskPromises = Array.from({ length: 5 }, (_, i) =>
-        Task.create({
-          title: `Concurrent Task ${i}`,
-          userId
-        })
+      const tasksData = Array.from({ length: 5 }, (_, i) => ({
+        title: `Concurrent Task ${i + 1}`,
+        userId
+      }));
+
+      const tasks = await Promise.all(
+        tasksData.map(taskData => Task.create(taskData))
       );
 
-      const tasks = await Promise.all(taskPromises);
-
       expect(tasks).toHaveLength(5);
-      tasks.forEach((task, i) => {
-        expect(task.title).toBe(`Concurrent Task ${i}`);
+      tasks.forEach((task, index) => {
+        expect(task.title).toBe(`Concurrent Task ${index + 1}`);
         expect(task.userId.toString()).toBe(userId.toString());
       });
     });
 
     it("should handle bulk operations", async () => {
-      const tasksToInsert = Array.from({ length: 10 }, (_, i) => ({
-        title: `Bulk Task ${i}`,
+      const tasksData = Array.from({ length: 10 }, (_, i) => ({
+        title: `Bulk Task ${i + 1}`,
         userId
       }));
 
-      const insertedTasks = await Task.insertMany(tasksToInsert);
+      const tasks = await Task.insertMany(tasksData);
 
-      expect(insertedTasks).toHaveLength(10);
-      insertedTasks.forEach((task, i) => {
-        expect(task.title).toBe(`Bulk Task ${i}`);
+      expect(tasks).toHaveLength(10);
+      tasks.forEach((task, index) => {
+        expect(task.title).toBe(`Bulk Task ${index + 1}`);
+        expect(task.userId.toString()).toBe(userId.toString());
       });
     });
   });

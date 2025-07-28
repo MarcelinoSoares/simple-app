@@ -9,39 +9,52 @@
 import React, { useState } from 'react'
 import { useAuth } from '../context/AuthContext.jsx'
 
-/**
- * Login page component
- * @function LoginPage
- * @description Renders a modern login form with authentication functionality
- * @returns {JSX.Element} Login page with form and authentication handling
- * @example
- * // Route to login page
- * <Route path="/login" element={<LoginPage />} />
- */
 function LoginPage() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLogin, setIsLogin] = useState(true)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
+  const [validationErrors, setValidationErrors] = useState({})
   const { login, register } = useAuth()
 
   /**
-   * Handles form submission for login or registration
+   * Validates form inputs
+   * @function validateForm
+   * @returns {boolean} True if form is valid, false otherwise
+   */
+  const validateForm = () => {
+    const errors = {}
+
+    if (!email.trim()) {
+      errors.email = 'Email is required'
+    } else if (!/\S+@\S+\.\S+/.test(email)) {
+      errors.email = 'Please enter a valid email address'
+    }
+
+    if (!password.trim()) {
+      errors.password = 'Password is required'
+    }
+
+    setValidationErrors(errors)
+    return Object.keys(errors).length === 0
+  }
+
+  /**
+   * Handles form submission
    * @function handleSubmit
-   * @description Processes form submission and calls appropriate authentication method
    * @param {Event} e - Form submission event
-   * @returns {Promise<void>} Resolves when authentication is complete
-   * @example
-   * // Form submission handler
-   * <form onSubmit={handleSubmit}>
-   *   {/* form fields */}
-   * </form>
    */
   const handleSubmit = async (e) => {
     e.preventDefault()
     setLoading(true)
     setError('')
+    setValidationErrors({})
+
+    if (!validateForm()) {
+      setLoading(false)
+      return
+    }
 
     try {
       if (isLogin) {
@@ -50,26 +63,54 @@ function LoginPage() {
         await register(email, password)
       }
     } catch (err) {
-      setError(err.message || 'An error occurred')
+      setError(err.message || 'Login failed')
     } finally {
       setLoading(false)
     }
   }
 
   /**
-   * Toggles between login and registration modes
+   * Handles input changes and clears validation errors
+   * @function handleInputChange
+   * @param {string} field - Field name (email or password)
+   * @param {string} value - New value
+   */
+  const handleInputChange = (field, value) => {
+    if (field === 'email') {
+      setEmail(value)
+    } else if (field === 'password') {
+      setPassword(value)
+    }
+
+    // Clear validation error for this field when user starts typing
+    if (validationErrors[field]) {
+      setValidationErrors(prev => ({
+        ...prev,
+        [field]: ''
+      }))
+    }
+  }
+
+  /**
+   * Handles key press events for form submission
+   * @function handleKeyPress
+   * @param {KeyboardEvent} e - Key press event
+   */
+  const handleKeyPress = (e) => {
+    if (e.key === 'Enter') {
+      e.preventDefault()
+      handleSubmit(e)
+    }
+  }
+
+  /**
+   * Toggles between login and register modes
    * @function toggleMode
-   * @description Switches between login and registration form modes
-   * @returns {void}
-   * @example
-   * // Toggle button handler
-   * <button onClick={toggleMode}>
-   *   {isLogin ? 'Need an account?' : 'Already have an account?'}
-   * </button>
    */
   const toggleMode = () => {
     setIsLogin(!isLogin)
     setError('')
+    setValidationErrors({})
   }
 
   return (
@@ -98,11 +139,15 @@ function LoginPage() {
                 id="email"
                 type="email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(e) => handleInputChange('email', e.target.value)}
+                onKeyPress={handleKeyPress}
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/40 focus:border-transparent transition-all duration-200"
                 placeholder="Enter your email"
                 required
               />
+              {validationErrors.email && (
+                <p className="text-red-200 text-sm mt-1">{validationErrors.email}</p>
+              )}
             </div>
 
             {/* Password Field */}
@@ -114,11 +159,15 @@ function LoginPage() {
                 id="password"
                 type="password"
                 value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                onChange={(e) => handleInputChange('password', e.target.value)}
+                onKeyPress={handleKeyPress}
                 className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/40 focus:border-transparent transition-all duration-200"
                 placeholder="Enter your password"
                 required
               />
+              {validationErrors.password && (
+                <p className="text-red-200 text-sm mt-1">{validationErrors.password}</p>
+              )}
             </div>
 
             {/* Error Message */}
@@ -132,28 +181,22 @@ function LoginPage() {
             <button
               type="submit"
               disabled={loading}
-              className="w-full bg-white text-primary-600 font-semibold py-3 px-6 rounded-xl hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-white/40 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-glow"
+              className="w-full bg-white/20 hover:bg-white/30 text-white font-semibold py-3 px-6 rounded-xl transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             >
-              {loading ? (
-                <div className="flex items-center justify-center">
-                  <div className="w-5 h-5 border-2 border-primary-600 border-t-transparent rounded-full animate-spin mr-2"></div>
-                  {isLogin ? 'Signing in...' : 'Creating account...'}
-                </div>
-              ) : (
-                isLogin ? 'Sign In' : 'Create Account'
-              )}
+              {loading ? 'Processing...' : (isLogin ? 'Sign In' : 'Sign Up')}
             </button>
-          </form>
 
-          {/* Toggle Mode */}
-          <div className="mt-6 text-center">
-            <button
-              onClick={toggleMode}
-              className="text-white/80 hover:text-white transition-colors duration-200"
-            >
-              {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
-            </button>
-          </div>
+            {/* Toggle Mode */}
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={toggleMode}
+                className="text-white/80 hover:text-white text-sm transition-colors duration-200"
+              >
+                {isLogin ? "Don't have an account? Sign Up" : 'Already have an account? Sign In'}
+              </button>
+            </div>
+          </form>
         </div>
       </div>
     </div>

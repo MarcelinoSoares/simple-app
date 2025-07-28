@@ -1,0 +1,93 @@
+name: Code Quality
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main, develop ]
+
+jobs:
+  code-quality:
+    name: Code Quality Analysis
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    # Backend Code Quality
+    - name: Install backend dependencies
+      working-directory: ./backend
+      run: npm ci
+
+    - name: Run backend ESLint
+      working-directory: ./backend
+      run: npm run lint
+
+    - name: Run backend Prettier check
+      working-directory: ./backend
+      run: npm run format:check
+
+    - name: Run backend SonarQube analysis
+      working-directory: ./backend
+      run: npm run sonar
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+    # Frontend Code Quality
+    - name: Install frontend dependencies
+      working-directory: ./frontend
+      run: npm ci
+
+    - name: Run frontend ESLint
+      working-directory: ./frontend
+      run: npm run lint
+
+    - name: Run frontend Prettier check
+      working-directory: ./frontend
+      run: npm run format:check
+
+    - name: Run frontend TypeScript check
+      working-directory: ./frontend
+      run: npm run type-check
+
+    - name: Run frontend SonarQube analysis
+      working-directory: ./frontend
+      run: npm run sonar
+      env:
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+  dependency-check:
+    name: Dependency Security Check
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+
+    - name: Run npm audit for backend
+      working-directory: ./backend
+      run: npm audit --audit-level=moderate
+
+    - name: Run npm audit for frontend
+      working-directory: ./frontend
+      run: npm audit --audit-level=moderate
+
+    - name: Run Snyk security scan
+      uses: snyk/actions/node@master
+      env:
+        SNYK_TOKEN: ${{ secrets.SNYK_TOKEN }}
+      with:
+        args: --severity-threshold=high 

@@ -203,9 +203,9 @@ function TodoPage() {
             </div>
           ) : (
             <div className="space-y-4">
-              {tasks.map(task => (
+              {tasks.filter(task => task && (task._id || task.id)).map(task => (
                 <TaskItem
-                  key={task._id}
+                  key={task._id || task.id || Math.random()}
                   task={task}
                   onUpdate={handleUpdateTask}
                   onDelete={handleDeleteTask}

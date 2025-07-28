@@ -12,32 +12,36 @@ beforeAll(async () => {
   await User.deleteMany({});
   await Task.deleteMany({});
 
+  // Create test user first
+  await User.create({ email: "test@example.com", password: "123456" });
+
   // Create authentication token
   const res = await request(app)
-    .post("/api/login")
+    .post("/api/auth/login")
     .send({ email: "test@example.com", password: "123456" });
   token = res.body.token;
 });
 
 describe("API Test Suite", () => {
-  test("POST /api/login - success", async () => {
+  test("POST /api/auth/login - success", async () => {
+    // Create user for this test
+    await User.create({ email: "test2@example.com", password: "123456" });
+    
     const res = await request(app)
-      .post("/api/login")
+      .post("/api/auth/login")
       .send({ email: "test2@example.com", password: "123456" });
     expect(res.statusCode).toBe(200);
     expect(res.body.token).toBeDefined();
   });
 
-  test("POST /api/login - failure with wrong password", async () => {
+  test("POST /api/auth/login - failure with wrong password", async () => {
     // First create the user
-    await request(app)
-      .post("/api/login")
-      .send({ email: "test@example.com", password: "123456" });
+    await User.create({ email: "test3@example.com", password: "123456" });
     
     // Agora tentar login com senha errada
     const res = await request(app)
-      .post("/api/login")
-      .send({ email: "test@example.com", password: "wrong" });
+      .post("/api/auth/login")
+      .send({ email: "test3@example.com", password: "wrong" });
     expect(res.statusCode).toBe(401);
   });
 

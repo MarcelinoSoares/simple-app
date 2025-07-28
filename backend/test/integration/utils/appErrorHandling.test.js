@@ -10,9 +10,6 @@ describe('App Error Handling Integration Tests', () => {
   let userId;
 
   beforeEach(async () => {
-    await Task.deleteMany({});
-    await User.deleteMany({});
-
     const user = await User.create({ email: "test@example.com", password: "123456" });
     userId = user._id;
     token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET || "secret", {

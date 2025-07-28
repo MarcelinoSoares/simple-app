@@ -42,25 +42,31 @@ router.post("/login", async (req, res) => {
     return res.status(400).json({ message: "Email and password are required" });
   }
   
-  // Find existing user
-  const user = await User.findOne({ email });
-  
-  // If user doesn't exist, return 401
-  if (!user) {
-    return res.status(401).json({ message: "Invalid credentials" });
+  try {
+    // Find existing user
+    const user = await User.findOne({ email });
+    
+    // If user doesn't exist, return 401
+    if (!user) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+    
+    // Check if password matches using bcrypt comparison
+    const isPasswordValid = await user.comparePassword(password);
+    if (!isPasswordValid) {
+      return res.status(401).json({ message: "Invalid credentials" });
+    }
+    
+    // Generate JWT token
+    const token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET || "secret", {
+      expiresIn: "1h",
+    });
+    
+    res.json({ token });
+  } catch (error) {
+    console.error('Login error:', error);
+    res.status(500).json({ message: "Internal server error" });
   }
-  
-  // Check if password matches
-  if (user.password !== password) {
-    return res.status(401).json({ message: "Invalid credentials" });
-  }
-  
-  // Generate JWT token
-  const token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET || "secret", {
-    expiresIn: "1h",
-  });
-  
-  res.json({ token });
 });
 
 /**

@@ -177,6 +177,7 @@ function TaskItem({ task, onUpdate, onDelete, onToggleComplete }) {
           <button
             onClick={handleToggleComplete}
             disabled={loading}
+            data-testid={`task-checkbox-${task._id}`}
             className={`flex-shrink-0 w-5 h-5 rounded border-2 transition-all duration-200 ${
               task.completed
                 ? 'bg-green-500 border-green-500'
@@ -192,7 +193,7 @@ function TaskItem({ task, onUpdate, onDelete, onToggleComplete }) {
 
           {/* Task content */}
           <div className="flex-1 min-w-0">
-            <h3 className={`text-white font-medium ${task.completed ? 'line-through' : ''}`}>
+            <h3 data-testid={`task-title-${task._id}`} className={`text-white font-medium ${task.completed ? 'line-through' : ''}`}>
               {task.title}
             </h3>
             {task.description && (
@@ -217,6 +218,7 @@ function TaskItem({ task, onUpdate, onDelete, onToggleComplete }) {
             <button
               onClick={handleDelete}
               disabled={loading}
+              data-testid={`delete-task-${task._id}`}
               className="text-red-400 hover:text-red-300 transition-colors disabled:opacity-50"
               title="Delete task"
             >

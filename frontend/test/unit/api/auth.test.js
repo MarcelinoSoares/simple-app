@@ -1,70 +1,40 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { login, logout, getToken, setToken } from '../../../src/api/auth'
-
-// Mock axios
-vi.mock('axios', () => ({
-  default: {
-    post: vi.fn()
-  }
-}))
+import { describe, it, expect, beforeEach, vi } from 'vitest'
 
 // Mock localStorage
 const localStorageMock = {
   getItem: vi.fn(),
   setItem: vi.fn(),
   removeItem: vi.fn(),
-  clear: vi.fn(),
+  clear: vi.fn()
 }
 Object.defineProperty(window, 'localStorage', {
   value: localStorageMock
 })
 
+// Mock axios
+const mockAxios = {
+  create: vi.fn(() => ({
+    post: vi.fn(),
+    get: vi.fn(),
+    put: vi.fn(),
+    delete: vi.fn(),
+    defaults: {
+      headers: {
+        common: {}
+      }
+    }
+  }))
+}
+
+vi.mock('axios', () => ({
+  default: mockAxios
+}))
+
+import { getToken, setToken, removeToken } from '../../../src/api/auth'
+
 describe('Auth API', () => {
-  let mockAxios
-
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks()
-    mockAxios = await import('axios')
-  })
-
-  describe('login', () => {
-    it('should make POST request to login endpoint with correct data', async () => {
-      const mockResponse = { data: { token: 'fake-token' } }
-      mockAxios.default.post.mockResolvedValue(mockResponse)
-
-      const result = await login('test@example.com', 'password123')
-
-      expect(mockAxios.default.post).toHaveBeenCalledWith(
-        'http://localhost:3001/api/login',
-        {
-          email: 'test@example.com',
-          password: 'password123'
-        }
-      )
-      expect(result).toEqual({ token: 'fake-token' })
-    })
-
-    it('should throw error when login fails', async () => {
-      const error = new Error('Login failed')
-      mockAxios.default.post.mockRejectedValue(error)
-
-      await expect(login('test@example.com', 'wrongpassword')).rejects.toThrow('Login failed')
-    })
-
-    it('should handle network errors', async () => {
-      const error = { response: { status: 500, data: { message: 'Server error' } } }
-      mockAxios.default.post.mockRejectedValue(error)
-
-      await expect(login('test@example.com', 'password123')).rejects.toEqual(error)
-    })
-  })
-
-  describe('logout', () => {
-    it('should remove token from localStorage', () => {
-      logout()
-
-      expect(localStorageMock.removeItem).toHaveBeenCalledWith('token')
-    })
   })
 
   describe('getToken', () => {
@@ -97,6 +67,14 @@ describe('Auth API', () => {
       setToken('')
 
       expect(localStorageMock.setItem).toHaveBeenCalledWith('token', '')
+    })
+  })
+
+  describe('removeToken', () => {
+    it('should remove token from localStorage', () => {
+      removeToken()
+
+      expect(localStorageMock.removeItem).toHaveBeenCalledWith('token')
     })
   })
 }) 

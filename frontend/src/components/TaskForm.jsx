@@ -73,7 +73,7 @@ function TaskForm({ onAddTask }) {
   }
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-4">
+    <form onSubmit={handleSubmit} className="space-y-4" data-testid="task-form">
       <div>
         <label htmlFor="task-title" className="block text-white font-medium mb-2">
           Task Title
@@ -85,6 +85,7 @@ function TaskForm({ onAddTask }) {
           onChange={(e) => setTitle(e.target.value)}
           onKeyPress={handleKeyPress}
           placeholder="Enter task title..."
+          data-testid="task-input"
           className="w-full px-4 py-3 bg-white/10 border border-white/20 rounded-xl text-white placeholder-white/60 focus:outline-none focus:ring-2 focus:ring-white/40 focus:border-transparent transition-all duration-200"
           required
         />
@@ -108,6 +109,7 @@ function TaskForm({ onAddTask }) {
       <button
         type="submit"
         disabled={loading || !title.trim()}
+        data-testid="create-task-btn"
         className="w-full bg-white text-primary-600 font-semibold py-3 px-6 rounded-xl hover:bg-white/90 focus:outline-none focus:ring-2 focus:ring-white/40 transition-all duration-200 disabled:opacity-50 disabled:cursor-not-allowed shadow-glow"
       >
         {loading ? (

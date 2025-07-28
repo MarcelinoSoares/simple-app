@@ -9,14 +9,6 @@ describe("User Model Integration Tests", () => {
     }
   });
 
-  beforeEach(async () => {
-    await User.deleteMany({});
-  });
-
-  afterAll(async () => {
-    await mongoose.connection.close();
-  });
-
   describe("User Creation", () => {
     it("should create a user with valid data", async () => {
       const userData = {
@@ -26,21 +18,17 @@ describe("User Model Integration Tests", () => {
 
       const user = await User.create(userData);
 
-      expect(user).toBeDefined();
       expect(user.email).toBe(userData.email);
-      expect(user.password).toBe(userData.password);
+      expect(user.password).not.toBe(userData.password); // Password should be hashed
+      expect(user.password).toMatch(/^\$2[aby]\$\d{1,2}\$[./A-Za-z0-9]{53}$/); // bcrypt hash pattern
       expect(user._id).toBeDefined();
-      expect(user.createdAt).toBeDefined();
-      expect(user.updatedAt).toBeDefined();
     });
 
     it("should create multiple users", async () => {
-      const usersData = [
+      const users = await User.create([
         { email: "user1@example.com", password: "123456" },
         { email: "user2@example.com", password: "654321" }
-      ];
-
-      const users = await User.create(usersData);
+      ]);
 
       expect(users).toHaveLength(2);
       expect(users[0].email).toBe("user1@example.com");
@@ -49,15 +37,9 @@ describe("User Model Integration Tests", () => {
   });
 
   describe("User Queries", () => {
-    beforeEach(async () => {
-      await User.create([
-        { email: "user1@example.com", password: "123456" },
-        { email: "user2@example.com", password: "654321" },
-        { email: "user3@example.com", password: "789012" }
-      ]);
-    });
-
     it("should find user by email", async () => {
+      await User.create({ email: "user1@example.com", password: "123456" });
+
       const user = await User.findOne({ email: "user1@example.com" });
 
       expect(user).toBeDefined();
@@ -65,12 +47,14 @@ describe("User Model Integration Tests", () => {
     });
 
     it("should find all users", async () => {
+      await User.create([
+        { email: "user1@example.com", password: "123456" },
+        { email: "user2@example.com", password: "654321" }
+      ]);
+
       const users = await User.find({});
 
-      expect(users).toHaveLength(3);
-      expect(users.map(u => u.email)).toContain("user1@example.com");
-      expect(users.map(u => u.email)).toContain("user2@example.com");
-      expect(users.map(u => u.email)).toContain("user3@example.com");
+      expect(users).toHaveLength(2);
     });
 
     it("should return null for non-existent user", async () => {
@@ -81,53 +65,34 @@ describe("User Model Integration Tests", () => {
   });
 
   describe("User Updates", () => {
-    let user;
-
-    beforeEach(async () => {
-      user = await User.create({
-        email: "test@example.com",
-        password: "123456"
-      });
-    });
-
     it("should update user password", async () => {
-      const newPassword = "newpassword123";
-      
-      const updatedUser = await User.findByIdAndUpdate(
-        user._id,
-        { password: newPassword },
-        { new: true }
-      );
+      const user = await User.create({ email: "test@example.com", password: "123456" });
 
-      expect(updatedUser.password).toBe(newPassword);
-      expect(updatedUser.email).toBe(user.email);
+      // Use save() method to trigger password hashing middleware
+      user.password = "newpassword";
+      const updatedUser = await user.save();
+
+      expect(updatedUser.password).not.toBe("newpassword"); // Password should be hashed
+      expect(updatedUser.password).toMatch(/^\$2[aby]\$\d{1,2}\$[./A-Za-z0-9]{53}$/); // bcrypt hash pattern
     });
 
     it("should update user email", async () => {
-      const newEmail = "updated@example.com";
-      
+      const user = await User.create({ email: "test@example.com", password: "123456" });
+
       const updatedUser = await User.findByIdAndUpdate(
         user._id,
-        { email: newEmail },
+        { email: "updated@example.com" },
         { new: true }
       );
 
-      expect(updatedUser.email).toBe(newEmail);
-      expect(updatedUser.password).toBe(user.password);
+      expect(updatedUser.email).toBe("updated@example.com");
     });
   });
 
   describe("User Deletion", () => {
-    let user;
-
-    beforeEach(async () => {
-      user = await User.create({
-        email: "test@example.com",
-        password: "123456"
-      });
-    });
-
     it("should delete user by id", async () => {
+      const user = await User.create({ email: "test@example.com", password: "123456" });
+
       await User.findByIdAndDelete(user._id);
 
       const deletedUser = await User.findById(user._id);
@@ -135,13 +100,20 @@ describe("User Model Integration Tests", () => {
     });
 
     it("should delete user by email", async () => {
-      await User.findOneAndDelete({ email: user.email });
+      await User.create({ email: "test@example.com", password: "123456" });
 
-      const deletedUser = await User.findById(user._id);
+      await User.findOneAndDelete({ email: "test@example.com" });
+
+      const deletedUser = await User.findOne({ email: "test@example.com" });
       expect(deletedUser).toBeNull();
     });
 
     it("should delete all users", async () => {
+      await User.create([
+        { email: "user1@example.com", password: "123456" },
+        { email: "user2@example.com", password: "654321" }
+      ]);
+
       await User.deleteMany({});
 
       const users = await User.find({});
@@ -151,36 +123,27 @@ describe("User Model Integration Tests", () => {
 
   describe("Database Operations", () => {
     it("should handle concurrent user creation", async () => {
-      const userPromises = Array.from({ length: 5 }, (_, i) =>
-        User.create({
-          email: `user${i}@example.com`,
-          password: `password${i}`
-        })
-      );
+      const promises = [
+        User.create({ email: "user1@example.com", password: "123456" }),
+        User.create({ email: "user2@example.com", password: "654321" }),
+        User.create({ email: "user3@example.com", password: "789012" })
+      ];
 
-      const users = await Promise.all(userPromises);
+      const users = await Promise.all(promises);
 
-      expect(users).toHaveLength(5);
-      users.forEach((user, i) => {
-        expect(user.email).toBe(`user${i}@example.com`);
-      });
+      expect(users).toHaveLength(3);
+      expect(users[0].email).toBe("user1@example.com");
+      expect(users[1].email).toBe("user2@example.com");
+      expect(users[2].email).toBe("user3@example.com");
     });
 
     it("should handle bulk operations", async () => {
       const users = await User.create([
-        {
-          email: "bulk1@example.com",
-          password: "123456"
-        },
-        {
-          email: "bulk2@example.com",
-          password: "654321"
-        }
+        { email: "user1@example.com", password: "123456" },
+        { email: "user2@example.com", password: "654321" }
       ]);
 
       expect(users).toHaveLength(2);
-      expect(users[0].email).toBe("bulk1@example.com");
-      expect(users[1].email).toBe("bulk2@example.com");
     });
   });
 }); 

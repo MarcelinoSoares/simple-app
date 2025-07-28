@@ -9,6 +9,7 @@
 const express = require("express");
 const Task = require("../models/Task");
 const authMiddleware = require("../middlewares/authMiddleware");
+const mongoose = require("mongoose");
 
 const router = express.Router();
 
@@ -40,7 +41,11 @@ router.use(authMiddleware);
  */
 router.get("/", async (req, res) => {
   try {
-    const tasks = await Task.find({ userId: req.user.id });
+    const userId = mongoose.Types.ObjectId.isValid(req.user.id) 
+      ? new mongoose.Types.ObjectId(req.user.id) 
+      : req.user.id;
+    
+    const tasks = await Task.find({ userId });
     res.json(tasks);
   } catch (error) {
     console.error("Error fetching tasks:", error);
@@ -77,11 +82,15 @@ router.post("/", async (req, res) => {
       return res.status(400).json({ message: "Title is required" });
     }
 
+    const userId = mongoose.Types.ObjectId.isValid(req.user.id) 
+      ? new mongoose.Types.ObjectId(req.user.id) 
+      : req.user.id;
+
     const task = new Task({
       title,
       description: description || "",
       completed: completed || false,
-      userId: req.user.id
+      userId
     });
 
     const savedTask = await task.save();
@@ -118,8 +127,11 @@ router.put("/:id", async (req, res) => {
   try {
     const { title, description, completed } = req.body;
     const taskId = req.params.id;
+    const userId = mongoose.Types.ObjectId.isValid(req.user.id) 
+      ? new mongoose.Types.ObjectId(req.user.id) 
+      : req.user.id;
 
-    const task = await Task.findOne({ _id: taskId, userId: req.user.id });
+    const task = await Task.findOne({ _id: taskId, userId });
     
     if (!task) {
       return res.status(404).json({ message: "Task not found" });
@@ -157,8 +169,11 @@ router.put("/:id", async (req, res) => {
 router.delete("/:id", async (req, res) => {
   try {
     const taskId = req.params.id;
+    const userId = mongoose.Types.ObjectId.isValid(req.user.id) 
+      ? new mongoose.Types.ObjectId(req.user.id) 
+      : req.user.id;
     
-    const task = await Task.findOneAndDelete({ _id: taskId, userId: req.user.id });
+    const task = await Task.findOneAndDelete({ _id: taskId, userId });
     
     if (!task) {
       return res.status(404).json({ message: "Task not found" });
@@ -198,8 +213,11 @@ router.delete("/:id", async (req, res) => {
 router.get("/:id", async (req, res) => {
   try {
     const taskId = req.params.id;
+    const userId = mongoose.Types.ObjectId.isValid(req.user.id) 
+      ? new mongoose.Types.ObjectId(req.user.id) 
+      : req.user.id;
     
-    const task = await Task.findOne({ _id: taskId, userId: req.user.id });
+    const task = await Task.findOne({ _id: taskId, userId });
     
     if (!task) {
       return res.status(404).json({ message: "Task not found" });

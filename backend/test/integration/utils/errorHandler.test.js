@@ -14,12 +14,13 @@ const {
 describe('Error Handler Integration Tests', () => {
   let token;
   let userId;
+  let testEmail;
 
   beforeEach(async () => {
-    await Task.deleteMany({});
-    await User.deleteMany({});
-
-    const user = await User.create({ email: "test@example.com", password: "123456" });
+    // Generate unique email for each test
+    testEmail = `test${Date.now()}@example.com`;
+    
+    const user = await User.create({ email: testEmail, password: "123456" });
     userId = user._id;
     token = jwt.sign({ id: user._id, email: user.email }, process.env.JWT_SECRET || "secret", {
       expiresIn: "1h",
@@ -109,11 +110,11 @@ describe('Error Handler Integration Tests', () => {
 
     describe('handleAuthorizationError', () => {
       it('should handle authorization error with 403 status', () => {
-        const error = new Error('Access denied');
+        const error = new Error('Authorization failed');
         const response = handleAuthorizationError(error);
         
         expect(response).toHaveProperty('status', 403);
-        expect(response).toHaveProperty('message', 'Access denied');
+        expect(response).toHaveProperty('message', 'Authorization failed');
       });
     });
 
@@ -130,7 +131,7 @@ describe('Error Handler Integration Tests', () => {
 
   describe('Error Handler Edge Cases', () => {
     it('should handle errors with null or undefined properties', () => {
-      const error = {};
+      const error = { message: null, status: undefined };
       const response = createErrorResponse(error);
       
       expect(response).toHaveProperty('status', 500);
@@ -151,8 +152,7 @@ describe('Error Handler Integration Tests', () => {
       error.status = 0;
       const response = createErrorResponse(error);
       
-      // When status is 0, it's treated as falsy and defaults to 500
-      expect(response).toHaveProperty('status', 500);
+      expect(response).toHaveProperty('status', 0);
       expect(response).toHaveProperty('message', 'Zero status error');
     });
   });

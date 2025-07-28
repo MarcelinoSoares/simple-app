@@ -147,7 +147,9 @@ export const setupAuthHeader = () => {
   }
 }
 
-// Setup auth header on module load
-setupAuthHeader()
+// Only setup auth header if we're in a browser environment
+if (typeof window !== 'undefined') {
+  setupAuthHeader()
+}
 
 export default api 

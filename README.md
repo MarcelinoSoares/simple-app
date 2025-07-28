@@ -1,439 +1,347 @@
-# 🚀 Simple Task Management App
+# 🚀 Simple App - Fullstack Application
 
-A complete fullstack application for task management with JWT authentication, automated tests and CI/CD.
+A modern fullstack application with React frontend and Node.js backend, complete with CI/CD, Docker and automated testing.
 
 ## 📋 Index
 
-- [Features](#-features)
-- [Technologies](#-technologies)
-- [Project Structure](#-project-structure)
-- [Installation](#-installation)
-- [Running the Project](#-running-the-project)
-- [Tests](#-tests)
-- [CI/CD](#-cicd)
-- [Code Coverage](#-code-coverage)
-- [Visual Tests](#-visual-tests)
-- [API Documentation](#-api-documentation)
+- [Overview](#overview)
+- [Technologies](#technologies)
+- [Quick Start](#quick-start)
+- [Development](#development)
+- [Testing](#testing)
+- [Deploy](#deploy)
+- [CI/CD](#cicd)
+- [Docker](#docker)
+- [Structure](#structure)
+- [Contributing](#contributing)
 
-## ✨ Features
+## 🎯 Overview
 
-### Backend
-- ✅ **JWT Authentication** - Secure login with tokens
-- ✅ **Task CRUD** - Create, read, update and delete tasks
-- ✅ **Data Isolation** - Each user sees only their tasks
-- ✅ **Input Validation** - Robust data validation
-- ✅ **Error Handling** - Centralized error middleware
-- ✅ **CORS Configured** - Cross-origin request support
+Simple App is a task management application with:
 
-### Frontend
-- ✅ **Modern React Interface** - Functional components with hooks
-- ✅ **Protected Routing** - Private routes with authentication
-- ✅ **State Management** - Local state with localStorage
-- ✅ **Responsive UI** - Adaptive design with Tailwind CSS
-- ✅ **Visual Feedback** - Loading and error states
+- ✅ **React Frontend** with Vite
+- ✅ **Node.js Backend** with Express
+- ✅ **MongoDB Database** with Mongoose
+- ✅ **JWT Authentication**
+- ✅ **Automated Testing** (Unit, Integration, E2E)
+- ✅ **Complete CI/CD** with GitHub Actions
+- ✅ **Containerization** with Docker
+- ✅ **Code Quality** with ESLint, Prettier, SonarQube
+- ✅ **Integrated Security**
 
-### Tests
-- ✅ **Unit Tests** - 63 tests with Jest
-- ✅ **Integration Tests** - API tests with Supertest
-- ✅ **E2E Tests** - Complete tests with Cypress
-- ✅ **Visual Tests** - Snapshots for visual regression
-- ✅ **Code Coverage** - 97.14% coverage
-
-## 🛠 Technologies
-
-### Backend
-- **Node.js** - JavaScript runtime
-- **Express.js** - Web framework
-- **MongoDB** - NoSQL database
-- **Mongoose** - ODM for MongoDB
-- **JWT** - Token authentication
-- **Jest** - Testing framework
-- **Supertest** - API testing
-- **NYC** - Code coverage
+## 🛠️ Technologies
 
 ### Frontend
-- **React 18** - UI library
-- **Vite** - Build tool and dev server
-- **React Router** - Routing
-- **Axios** - HTTP client
-- **Tailwind CSS** - CSS framework
+- **React 18** - UI Library
+- **Vite** - Build tool
+- **Tailwind CSS** - CSS Framework
+- **Vitest** - Test runner
 - **Cypress** - E2E testing
-- **@cypress/snapshot** - Visual testing
+
+### Backend
+- **Node.js 18** - Runtime
+- **Express** - Web framework
+- **MongoDB** - Database
+- **Mongoose** - ODM
+- **Jest** - Test runner
+- **JWT** - Authentication
 
 ### DevOps
-- **GitHub Actions** - CI/CD pipeline
-- **MongoDB Memory Server** - Test database
-- **Docker** - Containerization (MongoDB)
+- **Docker** - Containerization
+- **GitHub Actions** - CI/CD
+- **ESLint** - Linting
+- **Prettier** - Code formatting
+- **SonarQube** - Code quality
+
+## ⚡ Quick Start
+
+### Prerequisites
+- Node.js 18+
+- Docker & Docker Compose
+- Git
+
+### Quick Setup
+```bash
+# Clone repository
+git clone <repository-url>
+cd simple-app
+
+# Automatic setup
+make quick-start
+
+# Or manually:
+make setup
+make docker-dev
+```
+
+### Access
+- **Frontend**: http://localhost:5173
+- **Backend**: http://localhost:3000
+- **MongoDB**: localhost:27017
+
+## 🔧 Development
+
+### Main Commands
+```bash
+# View all available commands
+make help
+
+# Initial setup
+make setup
+
+# Install dependencies
+make install
+
+# Local development
+make dev-backend    # Backend in dev mode
+make dev-frontend   # Frontend in dev mode
+
+# Docker development
+make docker-dev     # Complete environment with Docker
+```
+
+### Development Structure
+```
+simple-app/
+├── backend/          # Node.js API
+├── frontend/         # React App
+├── scripts/          # Automation scripts
+├── docker-compose.yml
+└── Makefile
+```
+
+## 🧪 Testing
+
+### Run Tests
+```bash
+# All tests
+make test
+
+# With coverage
+make test-coverage
+
+# E2E tests
+make test-e2e
+
+# Specific tests
+cd backend && npm test
+cd frontend && npm test
+```
+
+### Test Coverage
+- **Backend**: Jest + Supertest
+- **Frontend**: Vitest + Testing Library
+- **E2E**: Cypress
+- **Goal**: > 80% coverage
+
+## 🚀 Deploy
+
+### Local Deploy
+```bash
+# Build and deploy
+make deploy
+
+# Or manually:
+docker-compose up -d
+```
+
+### Production Deploy
+Automatic deployment happens via GitHub Actions when:
+- Push to `main` branch
+- All tests pass
+- Docker image build is successful
+
+## 🔄 CI/CD
+
+### Automated Pipeline
+1. **Code Quality** - ESLint, Prettier, SonarQube
+2. **Security** - npm audit, Snyk, Trivy
+3. **Tests** - Unit, Integration, E2E
+4. **Build** - Docker images
+5. **Deploy** - Automatic production deployment
+
+### Run CI Locally
+```bash
+make ci
+```
+
+## 🐳 Docker
+
+### Images
+- `simple-app-backend` - Node.js API
+- `simple-app-frontend` - React App
+- `mongo:6.0` - Database
+- `redis:7-alpine` - Cache (optional)
+
+### Docker Commands
+```bash
+# Build images
+make docker-build
+
+# Start services
+make docker-up
+
+# Stop services
+make docker-down
+
+# Development
+make docker-dev
+
+# View logs
+make logs
+
+# Health check
+make health
+```
 
 ## 📁 Project Structure
 
 ```
 simple-app/
-├── backend/                    # Node.js/Express API
-│   ├── src/
-│   │   ├── models/            # Mongoose models
-│   │   ├── routes/            # API routes
-│   │   ├── middlewares/       # Custom middlewares
-│   │   ├── utils/             # Utilities
-│   │   ├── app.js             # Express configuration
-│   │   └── server.js          # HTTP server
-│   ├── test/                  # Organized tests
-│   │   ├── unit/              # Unit tests
-│   │   ├── integration/       # Integration tests
-│   │   ├── api/               # API tests
-│   │   └── setup.js           # Jest configuration
-│   ├── .env                   # Environment variables
-│   ├── jest.config.js         # Jest configuration
+├── .github/
+│   └── workflows/          # GitHub Actions
+├── backend/
+│   ├── src/               # Source code
+│   ├── test/              # Tests
+│   ├── Dockerfile         # Docker image
 │   └── package.json
-├── frontend/                   # React app
-│   ├── src/
-│   │   ├── pages/             # Application pages
-│   │   ├── styles/            # CSS styles
-│   │   ├── App.jsx            # Main component
-│   │   └── main.jsx           # Entry point
-│   ├── cypress/               # E2E tests
-│   │   ├── e2e/               # End-to-end tests
-│   │   ├── fixtures/          # Test data
-│   │   └── support/           # Cypress configuration
-│   ├── cypress.config.js      # Cypress configuration
+├── frontend/
+│   ├── src/               # Source code
+│   ├── test/              # Tests
+│   ├── Dockerfile         # Docker image
 │   └── package.json
-├── .github/                    # GitHub Actions
-│   └── workflows/
-│       └── test.yml           # CI/CD pipeline
-└── README.md                   # This documentation
+├── scripts/               # Automation scripts
+├── nginx/                 # nginx configuration
+├── docker-compose.yml     # Production
+├── docker-compose.dev.yml # Development
+├── Makefile              # Main commands
+└── README.md
 ```
 
-## 🚀 Installation
+## 🔍 Code Quality
 
-### Prerequisites
-- Node.js 18+
-- MongoDB (local or Atlas)
-- Git
-
-### 1. Clone the repository
-```bash
-git clone <repository-url>
-cd simple-app
-```
-
-### 2. Configure Backend
-```bash
-cd backend
-npm install
-cp .env.example .env
-# Edit the .env file with your settings
-```
-
-### 3. Configure Frontend
-```bash
-cd ../frontend
-npm install
-```
-
-## ⚡ Running the Project
-
-### Development
-
-#### Backend
-```bash
-cd backend
-npm run dev
-# Server running at http://localhost:3000
-```
-
-#### Frontend
-```bash
-cd frontend
-npm run dev
-# App running at http://localhost:5173
-```
-
-### Production
-
-#### Backend
-```bash
-cd backend
-npm start
-```
-
-#### Frontend
-```bash
-cd frontend
-npm run build
-npm run preview
-```
-
-## 🧪 Tests
-
-### Backend Tests
-
-```bash
-cd backend
-
-# All tests
-npm test
-
-# Tests with coverage
-npm run test:coverage
-
-# Specific tests
-npm test -- test/unit          # Unit only
-npm test -- test/integration   # Integration only
-npm test -- test/api           # API only
-
-# Watch mode
-npm run test:watch
-```
-
-### Frontend Tests
-
-```bash
-cd frontend
-
-# E2E tests (interactive mode)
-npm run cypress:open
-
-# E2E tests (headless mode)
-npm run cypress:run
-
-# Visual tests
-npm run cypress:run --spec "cypress/e2e/visual.cy.js"
-```
-
-### Current Coverage
-- ✅ **97.14%** of statements
-- ✅ **90%** of branches
-- ✅ **85.71%** of functions
-- ✅ **97.05%** of lines
-
-## 🔄 CI/CD
-
-The project includes a complete pipeline in GitHub Actions:
-
-### Automated Pipeline
-- ✅ **Build** - Frontend compilation
-- ✅ **Backend Tests** - Jest + coverage
-- ✅ **Frontend Tests** - Cypress E2E
-- ✅ **Reports** - Coverage and results
-- ✅ **Artifacts** - Screenshots and videos
-
-### Triggers
-- Push to `main`
-- Pull Requests to `main`
-
-### Services
-- MongoDB for tests
-- Node.js 18
-- Dependency cache
-
-## 📊 Code Coverage
-
-### Available Reports
-- **Text** - Console output
-- **HTML** - Interactive report
-- **LCOV** - CI/CD integration
-- **JSON** - Structured data
+### Tools
+- **ESLint** - JavaScript/React linting
+- **Prettier** - Code formatting
+- **SonarQube** - Quality analysis
+- **TypeScript** - Static typing (frontend)
 
 ### Commands
 ```bash
-cd backend
+# Linting
+make lint
+make lint-fix
 
-# HTML report
-npm run coverage:html
+# Formatting
+make format
+make format-check
 
-# Open report
-npm run coverage:open
-
-# LCOV report for CI
-npm run coverage
+# Security
+make security
 ```
 
-## 🎨 Visual Tests
+## 📊 Monitoring
 
-### Implemented Snapshots
-- ✅ **Login Page** - Login screen
-- ✅ **Empty Dashboard** - Dashboard without tasks
-- ✅ **Dashboard with Tasks** - Dashboard with content
-- ✅ **Completed Task** - Checked task state
+### Health Checks
+- Backend: `http://localhost:3000/health`
+- Frontend: `http://localhost/health`
+- MongoDB: Automatic ping
+- Redis: Automatic ping
 
-### Configuration
-- **Threshold**: 10% difference
-- **Update**: Manual via configuration
-- **Formats**: HTML and JSON
-
-### Commands
+### Logs
 ```bash
-cd frontend
+# View logs
+make logs
 
-# Run visual tests
-npx cypress run --spec "cypress/e2e/visual.cy.js"
-
-# Update snapshots
-# Edit cypress.config.js: updateSnapshots: true
+# Specific logs
+docker-compose logs -f backend
+docker-compose logs -f frontend
 ```
 
-## 📚 API Documentation
+## 🔧 Maintenance
 
-### Authentication
-
-#### POST /api/login
-```http
-POST /api/login
-Content-Type: application/json
-
-{
-  "email": "user@example.com",
-  "password": "password123"
-}
-```
-
-**Response:**
-```json
-{
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-}
-```
-
-### Tasks
-
-#### GET /api/tasks
-```http
-GET /api/tasks
-Authorization: Bearer <token>
-```
-
-#### POST /api/tasks
-```http
-POST /api/tasks
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "title": "New task",
-  "description": "Task description",
-  "completed": false
-}
-```
-
-#### PUT /api/tasks/:id
-```http
-PUT /api/tasks/:id
-Authorization: Bearer <token>
-Content-Type: application/json
-
-{
-  "title": "Updated task",
-  "completed": true
-}
-```
-
-#### DELETE /api/tasks/:id
-```http
-DELETE /api/tasks/:id
-Authorization: Bearer <token>
-```
-
-### Status Codes
-- `200` - Success
-- `201` - Created
-- `204` - No content
-- `400` - Invalid data
-- `401` - Unauthorized
-- `404` - Not found
-- `500` - Internal error
-
-## 🔧 Configuration
-
-### Environment Variables (Backend)
-
-```env
-PORT=3000
-MONGODB_URI=mongodb://localhost:27017/todo-app
-JWT_SECRET=your-secret-key
-CORS_ORIGIN=http://localhost:5173
-NODE_ENV=development
-```
-
-### Cypress Configuration (Frontend)
-
-```javascript
-// cypress.config.js
-{
-  baseUrl: 'http://localhost:5173',
-  viewportWidth: 1280,
-  viewportHeight: 720,
-  video: false,
-  screenshotOnRunFailure: true
-}
-```
-
-## 🚀 Deploy
-
-### Backend (Heroku/Railway)
+### Useful Commands
 ```bash
-# Configure environment variables
-MONGODB_URI=your-mongodb-atlas-url
-JWT_SECRET=your-production-secret
-CORS_ORIGIN=https://your-frontend-domain.com
+# Clear cache
+make clean
 
-# Deploy
-git push heroku main
+# Reset database
+make db-reset
+
+# Backup
+make backup
+
+# Health check
+make health
 ```
-
-### Frontend (Vercel/Netlify)
-```bash
-# Configure environment variables
-VITE_API_URL=https://your-backend-domain.com
-
-# Deploy
-npm run build
-# Upload dist/ folder
-```
-
-## 📈 Metrics
-
-### Performance
-- **Backend**: ~50ms response time
-- **Frontend**: <2s load time
-- **Tests**: ~7s total execution
-
-### Quality
-- **Coverage**: 97.14%
-- **Tests**: 63 passing tests
-- **Linting**: ESLint + Prettier
-- **Type Safety**: JSDoc annotations
 
 ## 🤝 Contributing
 
-1. Fork the project
-2. Create a branch (`git checkout -b feature/AmazingFeature`)
-3. Commit your changes (`git commit -m 'Add some AmazingFeature'`)
-4. Push to the branch (`git push origin feature/AmazingFeature`)
+### Development Flow
+1. Fork the repository
+2. Create a branch: `git checkout -b feature/new-feature`
+3. Commit your changes: `git commit -m 'feat: add new feature'`
+4. Push to the branch: `git push origin feature/new-feature`
 5. Open a Pull Request
 
-### Commit Standards
-- `feat:` New feature
-- `fix:` Bug fix
-- `docs:` Documentation
-- `test:` Tests
-- `refactor:` Refactoring
-- `chore:` Maintenance tasks
+### Standards
+- **Commits**: Conventional Commits
+- **Branches**: feature/, bugfix/, hotfix/
+- **Code Review**: Required
+- **Tests**: 100% coverage
 
-## 📄 License
+## 📈 Metrics
 
-This project is under the MIT license. See the [LICENSE](LICENSE) file for more details.
+### Quality
+- **Test coverage**: > 80%
+- **Code duplication**: < 3%
+- **Cyclomatic complexity**: < 10
+- **Technical debt**: < 5%
 
-## 👥 Authors
+### Performance
+- **Build time**: < 10 min
+- **Deploy time**: < 5 min
+- **Availability**: > 99.9%
 
-- **Your Name** - *Initial development* - [YourGitHub](https://github.com/yourgithub)
+## 🆘 Troubleshooting
 
-## 🙏 Acknowledgments
+### Common Issues
+1. **Docker not running**
+   ```bash
+   docker info
+   sudo systemctl start docker
+   ```
 
-- Jest team for the excellent testing tool
-- Cypress team for E2E testing
-- Tailwind CSS for the CSS framework
-- MongoDB team for the database
+2. **Ports in use**
+   ```bash
+   lsof -i :3000
+   kill -9 <PID>
+   ```
+
+3. **MongoDB not connecting**
+   ```bash
+   docker-compose logs mongodb
+   docker-compose restart mongodb
+   ```
+
+### Useful Logs
+- GitHub Actions: GitHub > Actions
+- Docker: `docker-compose logs -f`
+- Backend: `tail -f backend/logs/app.log`
+
+## 📞 Support
+
+For questions or issues:
+1. Check documentation
+2. Consult troubleshooting
+3. Open issue on GitHub
+4. Contact team
 
 ---
 
-⭐ **If this project helped you, consider giving it a star!** 
+**Complexity:** Medium  
+**T-shirt Sizing:** L  
+**Estimated time:** 3-4 days  
+**Coverage:** 100% functional
+
+⭐ **Star this project if it was helpful!** 

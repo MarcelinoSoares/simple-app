@@ -28,7 +28,11 @@
  * // Returns: { status: 500, message: 'Something went wrong' }
  */
 const createErrorResponse = (error, defaultStatus = 500) => {
-  const status = error.status || error.statusCode || defaultStatus;
+  // Check if status is explicitly set (including 0)
+  const status = (error.status !== undefined && error.status !== null) || 
+                 (error.statusCode !== undefined && error.statusCode !== null)
+                 ? (error.status !== undefined ? error.status : error.statusCode)
+                 : defaultStatus;
   const message = error.message || 'Internal Server Error';
   
   return {
