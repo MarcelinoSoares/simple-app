@@ -12,8 +12,9 @@ class LoginPage {
     cy.get("button[type='submit']").click();
   }
   assertLoginSuccess() {
-    // After successful login, user should be redirected to the main page (not /dashboard)
+    // After successful login, user should be redirected to the main page
     cy.url().should("not.include", "/login");
+    cy.url().should("include", "/");
     cy.contains("Task Manager").should("be.visible");
   }
   assertLoginFailure() {

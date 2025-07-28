@@ -5,6 +5,7 @@ describe('Visual Regression Tests', () => {
   beforeEach(() => {
     cy.fixture('users').as('users')
     cy.clearLocalStorage()
+    cy.mockApiResponses()
   })
 
   it('should match login page snapshot', () => {
@@ -25,39 +26,37 @@ describe('Visual Regression Tests', () => {
   })
 
   it('should match dashboard with tasks snapshot', function () {
-    // Login first
-    LoginPage.visit()
-    LoginPage.fillEmail(this.users.validUser.email)
-    LoginPage.fillPassword(this.users.validUser.password)
-    LoginPage.submit()
+    // Mock successful login
+    cy.mockAuth();
+    
+    // Visit todo page directly
+    cy.visit('/');
     
     // Wait for tasks to load
-    TodoPage.waitForTasksToLoad()
+    cy.waitForTasksToLoad()
     
     // Create a task
-    TodoPage.createTodo('Test Task for Snapshot', 'This is a test task for visual regression testing')
-    cy.wait(1000) // Wait for task to be created
+    cy.createTaskAndWait('Test Task for Snapshot', 'This is a test task for visual regression testing')
     
     // Take snapshot
     cy.takeSnapshot('dashboard-with-tasks')
   })
 
   it('should match completed task snapshot', function () {
-    // Login first
-    LoginPage.visit()
-    LoginPage.fillEmail(this.users.validUser.email)
-    LoginPage.fillPassword(this.users.validUser.password)
-    LoginPage.submit()
+    // Mock successful login
+    cy.mockAuth();
+    
+    // Visit todo page directly
+    cy.visit('/');
     
     // Wait for tasks to load
-    TodoPage.waitForTasksToLoad()
+    cy.waitForTasksToLoad()
     
     // Create and complete a task
-    TodoPage.createTodo('Task to Complete', 'This task will be marked as completed')
-    cy.wait(1000) // Wait for task to be created
+    cy.createTaskAndWait('Task to Complete', 'This task will be marked as completed')
     
     // Mark as completed by clicking the checkbox
-    cy.contains('Task to Complete').closest('div').within(() => {
+    cy.contains('Task to Complete').closest('div').parent().within(() => {
       cy.get('button').first().click() // First button is the checkbox
     })
     

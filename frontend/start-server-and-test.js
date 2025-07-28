@@ -2,6 +2,7 @@ import { spawn } from 'child_process';
 import http from 'http';
 
 let serverProcess = null;
+let serverPort = 5173;
 
 function startServer() {
   return new Promise((resolve, reject) => {
@@ -16,8 +17,11 @@ function startServer() {
       const output = data.toString();
       console.log(output);
       
-      if (output.includes('Local:') && output.includes('http://localhost:5173/')) {
-        console.log('✅ Server started successfully!');
+      // Extract port from Vite output
+      const portMatch = output.match(/Local:\s+http:\/\/localhost:(\d+)/);
+      if (portMatch) {
+        serverPort = parseInt(portMatch[1]);
+        console.log(`✅ Server started successfully on port ${serverPort}!`);
         resolve();
       }
     });
@@ -45,12 +49,12 @@ function waitForServer() {
     const checkServer = () => {
       const req = http.request({
         hostname: 'localhost',
-        port: 5173,
+        port: serverPort,
         path: '/',
         method: 'GET',
         timeout: 5000
       }, (res) => {
-        console.log(`✅ Server is responding! Status: ${res.statusCode}`);
+        console.log(`✅ Server is responding on port ${serverPort}! Status: ${res.statusCode}`);
         resolve();
       });
 
@@ -76,9 +80,10 @@ function runTests() {
   return new Promise((resolve, reject) => {
     console.log('🧪 Running E2E tests...');
     
-    const testProcess = spawn('npm', ['run', 'test:e2e'], {
+    const testProcess = spawn('npm', ['run', 'test:e2e:direct'], {
       stdio: 'inherit',
-      shell: true
+      shell: true,
+      env: { ...process.env, CYPRESS_BASE_URL: `http://localhost:${serverPort}` }
     });
 
     testProcess.on('close', (code) => {

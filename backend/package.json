@@ -19,7 +19,8 @@
     "format:check": "prettier --check src/ test/",
     "sonar": "sonar-scanner",
     "audit": "npm audit --audit-level=moderate",
-    "security": "npm audit && snyk test"
+    "security": "npm audit && snyk test",
+    "setup-test-data": "node scripts/setup-test-data.js"
   },
   "keywords": [
     "express",

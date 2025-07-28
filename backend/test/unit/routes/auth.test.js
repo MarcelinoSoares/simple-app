@@ -100,7 +100,7 @@ describe("POST /api/auth/login", () => {
 
   it("should handle missing JWT_SECRET environment variable", async () => {
     delete process.env.JWT_SECRET;
-    
+
     // Create a user first
     await User.create({
       email: "test@example.com",
@@ -120,7 +120,7 @@ describe("POST /api/auth/login", () => {
 
   it("should handle custom JWT_SECRET from environment", async () => {
     process.env.JWT_SECRET = "custom-secret";
-    
+
     // Create a user first
     await User.create({
       email: "test@example.com",
@@ -139,12 +139,6 @@ describe("POST /api/auth/login", () => {
   });
 
   it("should handle internal server error during login", async () => {
-    // Create a user first
-    await User.create({
-      email: "test@example.com",
-      password: "password123"
-    });
-
     // Mock User.findOne to throw an error
     const originalFindOne = User.findOne;
     User.findOne = jest.fn().mockRejectedValue(new Error("Database error"));
@@ -190,6 +184,7 @@ describe("POST /api/auth/register", () => {
 
     expect(response.status).toBe(201);
     expect(response.body).toHaveProperty("token");
+    expect(typeof response.body.token).toBe("string");
   });
 
   it("should reject registration for existing user", async () => {
@@ -267,5 +262,24 @@ describe("POST /api/auth/register", () => {
 
     expect(response.status).toBe(201);
     expect(response.body).toHaveProperty("token");
+  });
+
+  it("should handle internal server error during registration", async () => {
+    // Mock User.create to throw an error
+    const originalCreate = User.create;
+    User.create = jest.fn().mockRejectedValue(new Error("Database error"));
+
+    const response = await request(app)
+      .post("/api/auth/register")
+      .send({
+        email: "newuser@example.com",
+        password: "password123"
+      });
+
+    expect(response.status).toBe(500);
+    expect(response.body.message).toBe("Internal server error");
+
+    // Restore original method
+    User.create = originalCreate;
   });
 }); 
